@@ -198,7 +198,7 @@
 							},
 							"Source": {
 								"Provider": "ADLS",
-								"Location": "abfss://files@datalake9nlosdj.dfs.core.windows.net/RetailDB",
+								"Location": "abfss://files@datalake9nlosdj.dfs.core.windows.net/Retail_LakeDB",
 								"Properties": {
 									"FormatType": "csv",
 									"LinkedServiceName": "synapse9nlosdj-WorkspaceDefaultStorage"
@@ -301,7 +301,7 @@
 									"FormatType": "csv",
 									"SerializeLib": "org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe",
 									"Properties": {
-										"path": "abfss://files@datalake9nlosdj.dfs.core.windows.net/RetailDB/Customer",
+										"path": "abfss://files@datalake9nlosdj.dfs.core.windows.net/Retail_LakeDB/Customer",
 										"delimiter": ",",
 										"multiLine": "false",
 										"firstRowAsHeader": "false",
@@ -314,7 +314,7 @@
 								},
 								"Source": {
 									"Provider": "ADLS",
-									"Location": "abfss://files@datalake9nlosdj.dfs.core.windows.net/RetailDB/Customer",
+									"Location": "abfss://files@datalake9nlosdj.dfs.core.windows.net/Retail_LakeDB/Customer",
 									"Properties": {
 										"LinkedServiceName": "synapse9nlosdj-WorkspaceDefaultStorage",
 										"LocationSetToDatabaseDefault": true
