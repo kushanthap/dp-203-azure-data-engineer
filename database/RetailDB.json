@@ -11,7 +11,7 @@
 		},
 		"Source": {
 			"Provider": "ADLS",
-			"Location": "abfss://files@datalake9nlosdj.dfs.core.windows.net/RetailDB",
+			"Location": "abfss://files@datalake9nlosdj.dfs.core.windows.net/Retail_LakeDB",
 			"Properties": {
 				"FormatType": "csv",
 				"LinkedServiceName": "synapse9nlosdj-WorkspaceDefaultStorage"
