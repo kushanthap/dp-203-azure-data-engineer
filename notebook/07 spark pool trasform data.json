@@ -3,6 +3,10 @@
 	"properties": {
 		"nbformat": 4,
 		"nbformat_minor": 2,
+		"bigDataPool": {
+			"referenceName": "spark9nlosdj",
+			"type": "BigDataPoolReference"
+		},
 		"sessionProperties": {
 			"driverMemory": "28g",
 			"driverCores": 4,
@@ -13,7 +17,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "2",
 				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "ead6e9a8-16ac-4de3-9b2e-2dfe7e5250c5"
+				"spark.autotune.trackingId": "aae10d9c-2f92-4655-ba31-5e403194c03d"
 			}
 		},
 		"metadata": {
@@ -25,6 +29,21 @@
 			},
 			"language_info": {
 				"name": "python"
+			},
+			"a365ComputeOptions": {
+				"id": "/subscriptions/3ab7621d-8ee4-445a-8dd2-8b1f6718c4dc/resourceGroups/dp203-9nlosdj/providers/Microsoft.Synapse/workspaces/synapse9nlosdj/bigDataPools/spark9nlosdj",
+				"name": "spark9nlosdj",
+				"type": "Spark",
+				"endpoint": "https://synapse9nlosdj.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/spark9nlosdj",
+				"auth": {
+					"type": "AAD",
+					"authResource": "https://dev.azuresynapse.net"
+				},
+				"sparkVersion": "3.4",
+				"nodeCount": 3,
+				"cores": 4,
+				"memory": 28,
+				"automaticScaleJobs": false
 			},
 			"sessionKeepAliveTimeout": 30
 		},
@@ -52,10 +71,74 @@
 					"collapsed": false
 				},
 				"source": [
-					"order_details = spark.read.csv('/data/*.csv', header=True, inferSchema=True)\n",
+					"# infer schema\n",
+					"root_folder = 'abfss://files@datalake9nlosdj.dfs.core.windows.net/dp-203/Allfiles/labs/06'\n",
+					"order_details = spark.read.csv(root_folder+'/data/*.csv', header=True, inferSchema=True)\n",
 					"display(order_details.limit(5))"
 				],
-				"execution_count": null
+				"execution_count": 2
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"# check schema\r\n",
+					"order_details.printSchema()"
+				],
+				"execution_count": 5
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"# custom schema\r\n",
+					"from pyspark.sql.types import *\r\n",
+					"# from spark.sql.functions import *\r\n",
+					"custom_schema = StructType(\r\n",
+					"    [\r\n",
+					"        StructField('SalesOrderNumber', StringType()),\r\n",
+					"        StructField('SalesOrderLineNumber', StringType()),\r\n",
+					"        StructField('OrderDate', DateType()),\r\n",
+					"        StructField('CustomerName', StringType()),\r\n",
+					"        StructField('EmailAddress', StringType()),\r\n",
+					"        StructField('Item', StringType()),\r\n",
+					"        StructField('Quantity', FloatType()),\r\n",
+					"        StructField('UnitPrice', FloatType()),\r\n",
+					"        StructField('TaxAmount', FloatType()),\r\n",
+					"    ]\r\n",
+					")\r\n",
+					"\r\n",
+					"order_details = spark.read.load(\r\n",
+					"    path=root_folder+'/data/*.csv',\r\n",
+					"    format='csv',\r\n",
+					"    schema=custom_schema,\r\n",
+					"    header=True\r\n",
+					")\r\n",
+					"\r\n",
+					"order_details.printSchema()\r\n",
+					""
+				],
+				"execution_count": 15
 			},
 			{
 				"cell_type": "markdown",
