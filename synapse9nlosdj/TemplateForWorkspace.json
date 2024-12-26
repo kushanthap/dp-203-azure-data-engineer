@@ -98,6 +98,9 @@
 			"type": "Microsoft.Synapse/workspaces/sqlscripts",
 			"apiVersion": "2019-06-01-preview",
 			"properties": {
+				"folder": {
+					"name": "serverless sql pool"
+				},
 				"content": {
 					"query": "-- read a single csv file\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'https://datalake9nlosdj.dfs.core.windows.net/files/dp-203/Allfiles/labs/03/data/2019.csv',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS [result]\n\n-- read a single text file\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'https://datalake9nlosdj.dfs.core.windows.net/files/dp-203/Allfiles/labs/03/data/2019.csv',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS [result]\n\n\n-- read only csv files in a single folder\n    -- folder may contain many other file types\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'https://datalake9nlosdj.dfs.core.windows.net/files/dp-203/Allfiles/labs/03/data/*.csv',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS [result]\norder by OrderDate DESC\n\n\n\n-- read a all csv files in a single folder\n    -- folder must contain only csv files\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'https://datalake9nlosdj.dfs.core.windows.net/files/dp-203/Allfiles/labs/03/data/',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS [result]\norder by OrderDate DESC\n\n-- read data with schema (WITH)\n    -- orginal files don`t have headers\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'https://datalake9nlosdj.dfs.core.windows.net/files/dp-203/Allfiles/labs/02/data/*.csv',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0'\n    )\n    WITH (\n            SalesOrderNumber VARCHAR(10) COLLATE Latin1_General_100_BIN2_UTF8,\n            SalesOrderLineNumber INT,\n            OrderDate DATE,\n            CustomerName VARCHAR(25) COLLATE Latin1_General_100_BIN2_UTF8,\n            EmailAddress VARCHAR(50) COLLATE Latin1_General_100_BIN2_UTF8,\n            Item VARCHAR(30) COLLATE Latin1_General_100_BIN2_UTF8,\n            Quantity INT,\n            UnitPrice DECIMAL(18,2),\n            TaxAmount DECIMAL (18,2)\n    ) AS [result]\n\n-- using filepath() in results with csv files\n    -- reading all csv files in a folder\nSELECT\n    TOP 100 *,\n    [result].filepath(1) -- returns file name\nFROM\n    OPENROWSET(\n        BULK 'https://datalake9nlosdj.dfs.core.windows.net/files/dp-203/Allfiles/labs/02/data/*.csv',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0'\n    ) AS [result]\n\n    -- reading partitioned folder recursively\nSELECT\n    TOP 100 *,\n    [result].filepath(1) -- returns subfolder+filename\nFROM\n    OPENROWSET(\n        BULK 'https://datalake9nlosdj.dfs.core.windows.net/files/dp-203/Allfiles/labs/02/csv/**',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0'\n    ) AS [result]\n\n    -- reading partitioned folder\nSELECT\n    TOP 100 *,\n    [result].filepath(1) -- returns subfolder\nFROM\n    OPENROWSET(\n        BULK 'https://datalake9nlosdj.dfs.core.windows.net/files/dp-203/Allfiles/labs/02/csv/year=*/',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0'\n    ) AS [result]\n\n-- read single parqeut file\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'https://datalake9nlosdj.dfs.core.windows.net/files/dp-203/Allfiles/labs/02/data/2019.snappy.parquet',\n        FORMAT = 'PARQUET'\n    ) AS [result]\n\n\n\n-- read all parqeut files in a folders recursivly\n    -- only parquet files are in the folder\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'https://datalake9nlosdj.dfs.core.windows.net/files/dp-203/Allfiles/labs/02/parquet/**',\n        FORMAT = 'PARQUET'\n    ) AS [result]\n\n\n-- using filepath() in results with parquet files\nSELECT\n    TOP 100 *,\n    [result].filepath(1)\nFROM\n    OPENROWSET(\n        BULK 'https://datalake9nlosdj.dfs.core.windows.net/files/dp-203/Allfiles/labs/02/parquet/year=*/',\n        FORMAT = 'PARQUET'\n    ) AS [result]\n\n\n-- read and aggregating parquet data\nSELECT\n    YEAR(OrderDate) AS OrderYear,\n    COUNT(*) AS Order_Items\nFROM\n    OPENROWSET(\n        BULK 'https://datalake9nlosdj.dfs.core.windows.net/files/dp-203/Allfiles/labs/02/parquet/**',\n        FORMAT = 'PARQUET'\n    ) AS [result]\nGROUP BY YEAR(OrderDate)\nORDER BY OrderYear\n\n\n-- read parquet data from partitions\nSELECT\n    YEAR(OrderDate) AS OrderYear,\n    COUNT(*) AS Order_Items\nFROM\n    OPENROWSET(\n        BULK 'https://datalake9nlosdj.dfs.core.windows.net/files/dp-203/Allfiles/labs/02/parquet/year=*/',\n        FORMAT = 'PARQUET'\n    ) AS [result]\nWHERE [result].filepath(1) IN ('2019', '2020')\nGROUP BY YEAR(OrderDate)\nORDER BY OrderYear\n\n-- read json files\nSELECT TOP 100\n    jsonContent\n    ,JSON_VALUE (jsonContent, '$.SalesOrderNumber') AS SalesOrderNumber\n    ,JSON_VALUE (jsonContent, '$.CustomerName') AS CustomerName\nFROM\n    OPENROWSET(\n        BULK 'https://datalake9nlosdj.dfs.core.windows.net/files/dp-203/Allfiles/labs/02/data/*.json',\n        FORMAT = 'CSV',\n        FIELDQUOTE = '0x0b',\n        FIELDTERMINATOR ='0x0b',\n        ROWTERMINATOR = '0x0b'\n    )\n    WITH (\n        jsonContent varchar(MAX)\n    ) AS [result]\n\n-- read any text file\n    -- tab seperated file\n    -- rows are in new lines\nSELECT TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'https://datalake9nlosdj.dfs.core.windows.net/files/dp-203/Allfiles/labs/02/text/sample.txt',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE,\n        -- FIELDQUOTE = '0x0b',\n        FIELDTERMINATOR = '\\t', \n        ROWTERMINATOR = '\\n'\n    ) AS [result]\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
 					"metadata": {
@@ -114,12 +117,15 @@
 			"dependsOn": []
 		},
 		{
-			"name": "[concat(parameters('workspaceName'), '/02 serverless sql pools external tables')]",
+			"name": "[concat(parameters('workspaceName'), '/02 serverless sql pool external tables')]",
 			"type": "Microsoft.Synapse/workspaces/sqlscripts",
 			"apiVersion": "2019-06-01-preview",
 			"properties": {
+				"folder": {
+					"name": "serverless sql pool"
+				},
 				"content": {
-					"query": "-- 1) new database\nCREATE DATABASE Sales\n  COLLATE Latin1_General_100_BIN2_UTF8;\nGO;\n\nUse Sales;\nGO;\n-- 2) scoped creds (if needed)\n    -- if not authenticated with Synapse\n\n-- 3) new data source\n-- DROP EXTERNAL DATA SOURCE sales_data\nCREATE EXTERNAL DATA SOURCE sales_data WITH (\n    LOCATION = 'https://datalake9nlosdj.dfs.core.windows.net/files/dp-203/Allfiles/labs/02/data/'\n);\nGO;\n\n-- 4) file format\n\n    -- csv format\nCREATE EXTERNAL FILE FORMAT CsvFormat\n    WITH (\n        FORMAT_TYPE = DELIMITEDTEXT,\n        FORMAT_OPTIONS(\n            FIELD_TERMINATOR = ',',\n            STRING_DELIMITER = '\"'\n        )\n    );\nGO;\n\n    -- parquet format\nCREATE EXTERNAL FILE FORMAT ParquetFormat\n    WITH (\n        FORMAT_TYPE = PARQUET,\n        DATA_COMPRESSION = 'org.apache.hadoop.io.compress.SnappyCodec'\n    );\nGO;\n\n\n-- 5) external table\n-- DROP EXTERNAL TABLE dbo.orders\n\n    -- csv \nCREATE EXTERNAL TABLE dbo.orders\n(\n    SalesOrderNumber VARCHAR(10),\n    SalesOrderLineNumber INT,\n    OrderDate DATE,\n    CustomerName VARCHAR(25),\n    EmailAddress VARCHAR(50),\n    Item VARCHAR(30),\n    Quantity INT,\n    UnitPrice DECIMAL(18,2),\n    TaxAmount DECIMAL (18,2)\n)\nWITH\n(\n    DATA_SOURCE =sales_data,\n    LOCATION = '*.csv',\n    FILE_FORMAT = CsvFormat\n);\nGO\n\n    -- parquet\n-- DROP EXTERNAL TABLE dbo.ordersParquet\nCREATE EXTERNAL TABLE dbo.ordersParquet\nWITH (\n    DATA_SOURCE =sales_data,\n    LOCATION = '*.parquet',\n    FILE_FORMAT = ParquetFormat\n);\nGO\n\n-- query external table\nSELECT TOP 100 * FROM [dbo].[orders]\n\nSELECT TOP 100 * FROM [dbo].[ordersParquet]\n\nSELECT YEAR(OrderDate) AS OrderYear,\n        MONTH(OrderDate) AS OrderMonth,\n        SUM(Quantity) Quantity,\n       SUM((UnitPrice * Quantity) + TaxAmount) AS GrossRevenue\nFROM dbo.orders\nGROUP BY YEAR(OrderDate), MONTH(OrderDate)\nORDER BY OrderYear, OrderMonth;\n\n-- **********************\n-- keep things neat in a stored procedure\nUSE Sales;\nGO;\n\nDROP PROCEDURE sp_GetYearlySales\n\nCREATE PROCEDURE sp_GetYearlySales\nAS\nBEGIN\n    -- drop existing table\n    IF EXISTS (\n            SELECT * FROM sys.external_tables\n            WHERE name = 'YearlySalesTotals'\n        )\n        DROP EXTERNAL TABLE YearlySalesTotals\n    -- create external table\n    CREATE EXTERNAL TABLE YearlySalesTotals\n    WITH (\n            LOCATION = 'yearlysales/',\n            DATA_SOURCE = external_table_data,\n            FILE_FORMAT = ParquetFormat\n        )\n    AS\n    SELECT YEAR(OrderDate) AS CalendarYear,\n            SUM(Quantity) AS ItemsSold,\n            ROUND(SUM(UnitPrice) - SUM(TaxAmount), 2) AS NetRevenue\n    FROM\n        OPENROWSET(\n            BULK '*.csv',\n            DATA_SOURCE = 'lab_03_data',\n            FORMAT = 'CSV',\n            PARSER_VERSION = '2.0',\n            HEADER_ROW = TRUE\n        ) AS orders\n    GROUP BY YEAR(OrderDate)\nEND\n\nEXEC sp_GetYearlySales;\n\nSELECT * FROM dbo.YearlySalesTotals\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+					"query": "-- 1) new database\nCREATE DATABASE Sales\n  COLLATE Latin1_General_100_BIN2_UTF8;\nGO;\n\nUse Sales;\nGO;\n-- 2) scoped creds (if needed)\n    -- if not authenticated with Synapse\n\n-- 3) new data source\n-- DROP EXTERNAL DATA SOURCE sales_data\nCREATE EXTERNAL DATA SOURCE sales_data WITH (\n    LOCATION = 'https://datalake9nlosdj.dfs.core.windows.net/files/dp-203/Allfiles/labs/02/data/'\n);\nGO;\n\nCREATE EXTERNAL DATA SOURCE external_table_data WITH (\n    LOCATION = 'https://datalake9nlosdj.dfs.core.windows.net/files/external_table_data/'\n);\nGO;\n\nCREATE EXTERNAL DATA SOURCE lab_03_data WITH (\n    LOCATION = 'https://datalake9nlosdj.dfs.core.windows.net/files/dp-203/Allfiles/labs/03/data/'\n);\nGO;\n\n-- 4) file format\n\n    -- csv format\nCREATE EXTERNAL FILE FORMAT CsvFormat\n    WITH (\n        FORMAT_TYPE = DELIMITEDTEXT,\n        FORMAT_OPTIONS(\n            FIELD_TERMINATOR = ',',\n            STRING_DELIMITER = '\"'\n        )\n    );\nGO;\n\n    -- parquet format\n-- drop EXTERNAL FILE FORMAT ParquetFormat\nCREATE EXTERNAL FILE FORMAT ParquetFormat\n    WITH (\n            FORMAT_TYPE = PARQUET,\n            DATA_COMPRESSION = 'org.apache.hadoop.io.compress.SnappyCodec'\n        );\nGO;\n\n\n-- 5) external table\n-- DROP EXTERNAL TABLE dbo.orders\n\n    -- exsting csv files\nCREATE EXTERNAL TABLE dbo.orders\n(\n    SalesOrderNumber VARCHAR(10),\n    SalesOrderLineNumber INT,\n    OrderDate DATE,\n    CustomerName VARCHAR(25),\n    EmailAddress VARCHAR(50),\n    Item VARCHAR(30),\n    Quantity INT,\n    UnitPrice DECIMAL(18,2),\n    TaxAmount DECIMAL (18,2)\n)\nWITH\n(\n    DATA_SOURCE =sales_data,\n    LOCATION = '*.csv',\n    FILE_FORMAT = CsvFormat\n);\nGO\n\n    -- existing parquet files\n-- DROP EXTERNAL TABLE dbo.ordersParquet\n-- ********* NOT WORKING *****\nCREATE EXTERNAL TABLE dbo.ordersParquet\n(\n    Product VARCHAR(8),\n    ItemsSold BIGINT,\n    NetRevenue FLOAT\n)\nWITH (\n    DATA_SOURCE =external_table_data,\n    LOCATION = 'productsales/',\n    FILE_FORMAT = ParquetFormat\n);\nGO\n\n\n-- create external table as select (SETAS)\nCREATE EXTERNAL TABLE ProductSalesTotals\n    WITH (\n        LOCATION = 'productsales/',\n        DATA_SOURCE = external_table_data,\n        FILE_FORMAT = ParquetFormat\n    )\nAS\nSELECT Item AS Product,\n    SUM(Quantity) AS ItemsSold,\n    ROUND(SUM(UnitPrice) - SUM(TaxAmount), 2) AS NetRevenue\nFROM\n    OPENROWSET(\n        BULK '*.csv', -- relative path only as DATA_SOURCE is given\n        DATA_SOURCE = 'lab_03_data',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS orders\nGROUP BY Item;\n\n\n-- query external table\nSELECT TOP 100 * FROM [dbo].[orders]\nSELECT TOP 100 * FROM [dbo].[ordersParquet]\nSELECT TOP 100 * FROM [dbo].[ProductSalesTotals]\n\nSELECT YEAR(OrderDate) AS OrderYear,\n        MONTH(OrderDate) AS OrderMonth,\n        SUM(Quantity) Quantity,\n       SUM((UnitPrice * Quantity) + TaxAmount) AS GrossRevenue\nFROM dbo.orders\nGROUP BY YEAR(OrderDate), MONTH(OrderDate)\nORDER BY OrderYear, OrderMonth;\n\n-- **********************\n-- keep things neat in a stored procedure\nUSE Sales;\nGO;\n\nDROP PROCEDURE sp_GetYearlySales\n\nCREATE PROCEDURE sp_GetYearlySales\nAS\nBEGIN\n    -- drop existing table\n    IF EXISTS (\n            SELECT * FROM sys.external_tables\n            WHERE name = 'YearlySalesTotals'\n        )\n        DROP EXTERNAL TABLE YearlySalesTotals\n    -- create external table\n    CREATE EXTERNAL TABLE YearlySalesTotals\n    WITH (\n            LOCATION = 'yearlysales/',\n            DATA_SOURCE = external_table_data,\n            FILE_FORMAT = ParquetFormat\n        )\n    AS\n    SELECT YEAR(OrderDate) AS CalendarYear,\n            SUM(Quantity) AS ItemsSold,\n            ROUND(SUM(UnitPrice) - SUM(TaxAmount), 2) AS NetRevenue\n    FROM\n        OPENROWSET(\n            BULK '*.csv',\n            DATA_SOURCE = 'lab_03_data',\n            FORMAT = 'CSV',\n            PARSER_VERSION = '2.0',\n            HEADER_ROW = TRUE\n        ) AS orders\n    GROUP BY YEAR(OrderDate)\nEND\n\nEXEC sp_GetYearlySales;\n\nSELECT * FROM dbo.YearlySalesTotals\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
 					"metadata": {
 						"language": "sql"
 					},
@@ -134,10 +140,13 @@
 			"dependsOn": []
 		},
 		{
-			"name": "[concat(parameters('workspaceName'), '/03 Lake database querying')]",
+			"name": "[concat(parameters('workspaceName'), '/03 lake database querying')]",
 			"type": "Microsoft.Synapse/workspaces/sqlscripts",
 			"apiVersion": "2019-06-01-preview",
 			"properties": {
+				"folder": {
+					"name": "serverless sql pool"
+				},
 				"content": {
 					"query": "-- general lake db queries\nSELECT TOP (100) [CustomerId]\n,[FirstName]\n,[LastName]\n,[EmailAddress]\n,[Phone]\n FROM [RetailDB].[dbo].[Customer]\n\n SELECT TOP (100) *\n FROM [RetailDB].[dbo].[Product]\n\n SELECT TOP (100) *\n FROM [RetailDB].[dbo].[SalesOrder]\n\n\nSELECT \n    o.SalesOrderID, \n    c.EmailAddress, \n    p.ProductName, \n    o.Quantity\nFROM \n    SalesOrder AS o\nJOIN Customer AS c \n    ON o.CustomerId = c.CustomerId\nJOIN Product AS p \n    ON o.ProductId = p.ProductId\n\n-- insert records *** NOT POSSIBLE ***\nINSERT INTO [RetailDB].[dbo].[SalesOrder]\nVALUES (99999, CAST('2022-01-01' AS Datetime), 1, 6, 5, 1)\n\n\n-- create new external table\n    -- **** NOT POSSIBLE ****\n    -- can`t use CREATE EXTERNAL DATA SOURCE, CREATE EXTERNAL FILE FORMAT\n\n-- create views\n\nCREATE SCHEMA Sales\n\nCREATE VIEW Sales.SalesOrderView AS\nSELECT *\nFROM \n    [RetailDB].[dbo].[SalesOrder];\n\nSELECT *\nFROM \n    [RetailDB].[Sales].[SalesOrderView];\n\n",
 					"metadata": {
@@ -158,6 +167,9 @@
 			"type": "Microsoft.Synapse/workspaces/sqlscripts",
 			"apiVersion": "2019-06-01-preview",
 			"properties": {
+				"folder": {
+					"name": "serverless sql pool"
+				},
 				"content": {
 					"query": "use Sales \ngo\n\n-- create login \nCREATE LOGIN [test@dilrukshinioutlook.onmicrosoft.com] from external provider;\n\n-- create user\nCREATE USER test from LOGIN [test@dilrukshinioutlook.onmicrosoft.com]\n\n-- add user\nALTER ROLE db_datareader\nADD MEMBER test\n",
 					"metadata": {
@@ -178,6 +190,9 @@
 			"type": "Microsoft.Synapse/workspaces/sqlscripts",
 			"apiVersion": "2019-06-01-preview",
 			"properties": {
+				"folder": {
+					"name": "dedicated sql pool"
+				},
 				"content": {
 					"query": "SELECT  d.CalendarYear AS Year,\n        SUM(i.SalesAmount) AS InternetSalesAmount\nFROM FactInternetSales AS i\nJOIN DimDate AS d ON i.OrderDateKey = d.DateKey\nGROUP BY d.CalendarYear\nORDER BY Year;\n\n-- snowflake joins\nSELECT  d.CalendarYear AS Year,\n        d.MonthNumberOfYear as Month,\n        SUM(i.SalesAmount) AS InternetSalesAmount\nFROM FactInternetSales AS i\nJOIN DimDate AS d ON i.OrderDateKey = d.DateKey\nGROUP BY d.CalendarYear, d.MonthNumberOfYear\nORDER BY Year, Month; -- can use alias??\n\n\nSELECT  d.CalendarYear AS Year,\n        g.EnglishCountryRegionName as Region,\n        SUM(i.SalesAmount) AS InternetSalesAmount\nFROM FactInternetSales AS i\nJOIN DimDate AS d ON i.OrderDateKey = d.DateKey\nJOIN DimCustomer as c ON i.CustomerKey = c.CustomerKey\nJOIN DimGeography as g on c.GeographyKey = g.GeographyKey\nGROUP BY d.CalendarYear, g.EnglishCountryRegionName\nORDER BY Year, Region; -- can use alias??\n\n\nSELECT  d.CalendarYear AS Year,\n        pc.EnglishProductCategoryName AS ProductCategory,\n        g.EnglishCountryRegionName AS Region,\n        SUM(i.SalesAmount) AS InternetSalesAmount\nFROM FactInternetSales AS i\nJOIN DimDate AS d ON i.OrderDateKey = d.DateKey\nJOIN DimCustomer AS c ON i.CustomerKey = c.CustomerKey\nJOIN DimGeography AS g ON c.GeographyKey = g.GeographyKey\nJOIN DimProduct AS p ON i.ProductKey = p.ProductKey\nJOIN DimProductSubcategory AS ps ON p.ProductSubcategoryKey = ps.ProductSubcategoryKey\nJOIN DimProductCategory AS pc ON ps.ProductCategoryKey = pc.ProductCategoryKey\nGROUP BY d.CalendarYear, pc.EnglishProductCategoryName, g.EnglishCountryRegionName\nORDER BY Year, ProductCategory, Region;\n\n\n-- partitions\n    -- note there is no group by\nSELECT  g.EnglishCountryRegionName AS Region,\n        ROW_NUMBER() OVER(PARTITION BY g.EnglishCountryRegionName\n                          ORDER BY i.SalesAmount ASC) AS RowNumber,\n        i.SalesOrderNumber AS OrderNo,\n        i.SalesOrderLineNumber AS LineItem,\n        i.SalesAmount AS SalesAmount,\n        SUM(i.SalesAmount) OVER(PARTITION BY g.EnglishCountryRegionName) AS RegionTotal,\n        AVG(i.SalesAmount) OVER(PARTITION BY g.EnglishCountryRegionName) AS RegionAverage\nFROM FactInternetSales AS i\nJOIN DimDate AS d ON i.OrderDateKey = d.DateKey\nJOIN DimCustomer AS c ON i.CustomerKey = c.CustomerKey\nJOIN DimGeography AS g ON c.GeographyKey = g.GeographyKey\nWHERE d.CalendarYear = 2022\nORDER BY Region;\n\n\nSELECT  g.EnglishCountryRegionName AS Region,\n        g.City,\n        SUM(i.SalesAmount) AS CityTotal,\n        SUM(SUM(i.SalesAmount)) OVER(PARTITION BY g.EnglishCountryRegionName) AS RegionTotal,\n        RANK() OVER(PARTITION BY g.EnglishCountryRegionName\n                    ORDER BY SUM(i.SalesAmount) DESC) AS RegionalRank\nFROM FactInternetSales AS i\nJOIN DimDate AS d ON i.OrderDateKey = d.DateKey\nJOIN DimCustomer AS c ON i.CustomerKey = c.CustomerKey\nJOIN DimGeography AS g ON c.GeographyKey = g.GeographyKey\nGROUP BY g.EnglishCountryRegionName, g.City\nORDER BY Region;\n\n-- approximate count\nSELECT d.CalendarYear AS CalendarYear,\n    COUNT(DISTINCT i.SalesOrderNumber) AS Orders\nFROM FactInternetSales AS i\nJOIN DimDate AS d ON i.OrderDateKey = d.DateKey\nGROUP BY d.CalendarYear\nORDER BY CalendarYear;\n\nSELECT d.CalendarYear AS CalendarYear,\n    APPROX_COUNT_DISTINCT(i.SalesOrderNumber) AS Orders\nFROM FactInternetSales AS i\nJOIN DimDate AS d ON i.OrderDateKey = d.DateKey\nGROUP BY d.CalendarYear\nORDER BY CalendarYear;\n\n\n-- excercise \n\nSELECT  FiscalYear AS FiscalYear,\n        FiscalQuarter as FiscalQuarter,\n        SUM(OrderQuantity) OrderQuantity\nfrom FactInternetSales AS i\nJOIN DimDate AS d ON i.OrderDateKey = d.DateKey\ngroup by FiscalYear, FiscalQuarter\n\nSELECT  FiscalYear AS FiscalYear,\n        FiscalQuarter as FiscalQuarter,\n        SalesTerritoryRegion as TerritoryRegion,\n        ps.ProductCategoryKey as ProductCategoryKey, \n        SUM(OrderQuantity) OrderQuantity\nfrom FactInternetSales AS i\nJOIN DimDate AS d ON i.OrderDateKey = d.DateKey\nJOIN DimSalesTerritory as t on i.SalesTerritoryKey = t.SalesTerritoryKey\nJOIN DimProduct AS p ON i.ProductKey = p.ProductKey\nJOIN DimProductSubcategory AS ps ON p.ProductSubcategoryKey = ps.ProductSubcategoryKey\nJOIN DimProductCategory AS pc ON ps.ProductCategoryKey = pc.ProductCategoryKey\ngroup by FiscalYear, FiscalQuarter, SalesTerritoryRegion, ps.ProductCategoryKey\n\nSELECT  FiscalYear AS FiscalYear,\n        SalesTerritoryRegion as TerritoryRegion,\n        RANK() OVER (PARTITION by FiscalYear order by SUM(SalesAmount)) as rank,\n        SUM(SalesAmount) totalSalesAmount\nfrom FactInternetSales AS i\nJOIN DimDate AS d ON i.OrderDateKey = d.DateKey\nJOIN DimSalesTerritory as t on i.SalesTerritoryKey = t.SalesTerritoryKey\ngroup by FiscalYear, SalesTerritoryRegion\norder by FiscalYear\n\n\n\n\n\n",
 					"metadata": {
@@ -198,6 +213,9 @@
 			"type": "Microsoft.Synapse/workspaces/sqlscripts",
 			"apiVersion": "2019-06-01-preview",
 			"properties": {
+				"folder": {
+					"name": "dedicated sql pool"
+				},
 				"content": {
 					"query": "-- creating staging tables\nCREATE TABLE [dbo].[StageProduct](\n    [ProductID] [nvarchar](30) NULL,\n    [ProductName] [nvarchar](50) NULL,\n    [ProductCategory] [nvarchar](24) NULL,\n    [Color] [nvarchar](30) NULL,\n    [Size] [nvarchar](50) NULL,\n    [ListPrice] [money] NULL,\n    [Discontinued] [bit] NULL)\nWITH\n(\n\tDISTRIBUTION = ROUND_ROBIN,\n\tCLUSTERED COLUMNSTORE INDEX\n)\n\nCREATE TABLE [dbo].[StageCustomer]\n( \n\t[GeographyKey] [int]  NULL,\n\t[CustomerAlternateKey] [nvarchar](15)  NOT NULL,\n\t[Title] [nvarchar](8)  NULL,\n\t[FirstName] [nvarchar](50)  NULL,\n\t[MiddleName] [nvarchar](50)  NULL,\n\t[LastName] [nvarchar](50)  NULL,\n\t[NameStyle] [bit]  NULL,\n\t[BirthDate] [date]  NULL,\n\t[MaritalStatus] [nchar](1)  NULL,\n\t[Suffix] [nvarchar](10)  NULL,\n\t[Gender] [nvarchar](1)  NULL,\n\t[EmailAddress] [nvarchar](50)  NULL,\n\t[YearlyIncome] [money]  NULL,\n\t[TotalChildren] [tinyint]  NULL,\n\t[NumberChildrenAtHome] [tinyint]  NULL,\n\t[EnglishEducation] [nvarchar](40)  NULL,\n\t[SpanishEducation] [nvarchar](40)  NULL,\n\t[FrenchEducation] [nvarchar](40)  NULL,\n\t[EnglishOccupation] [nvarchar](100)  NULL,\n\t[SpanishOccupation] [nvarchar](100)  NULL,\n\t[FrenchOccupation] [nvarchar](100)  NULL,\n\t[HouseOwnerFlag] [nchar](1)  NULL,\n\t[NumberCarsOwned] [tinyint]  NULL,\n\t[AddressLine1] [nvarchar](120)  NULL,\n\t[AddressLine2] [nvarchar](120)  NULL,\n\t[Phone] [nvarchar](20)  NULL,\n\t[DateFirstPurchase] [date]  NULL,\n\t[CommuteDistance] [nvarchar](15)  NULL\n)\nWITH\n(\n\tDISTRIBUTION = ROUND_ROBIN,\n\tCLUSTERED COLUMNSTORE INDEX\n)\n\n\n-- load data\nCOPY INTO dbo.StageProduct\n    (ProductID, ProductName, ProductCategory, Color, Size, ListPrice, Discontinued)\nFROM 'https://datalake9nlosdj.dfs.core.windows.net/files/dp-203/Allfiles/labs/09/data/Product.csv'\nWITH\n(\n    FILE_TYPE = 'CSV',\n    MAXERRORS = 0,\n    IDENTITY_INSERT = 'OFF',\n    FIRSTROW = 2 --Skip header row\n);\n\n\n-- load data with error tracking\nCOPY INTO dbo.StageCustomer\n(GeographyKey, CustomerAlternateKey, Title, FirstName, MiddleName, LastName, NameStyle, BirthDate, \nMaritalStatus, Suffix, Gender, EmailAddress, YearlyIncome, TotalChildren, NumberChildrenAtHome, EnglishEducation, \nSpanishEducation, FrenchEducation, EnglishOccupation, SpanishOccupation, FrenchOccupation, HouseOwnerFlag, \nNumberCarsOwned, AddressLine1, AddressLine2, Phone, DateFirstPurchase, CommuteDistance)\nFROM 'https://datalake9nlosdj.dfs.core.windows.net/files/dp-203/Allfiles/labs/09/data/Customer.csv'\nWITH\n(\n    FILE_TYPE = 'CSV'\n    ,MAXERRORS = 5\n    ,FIRSTROW = 2 -- skip header row\n    ,ERRORFILE = 'https://datalake9nlosdj.dfs.core.windows.net/files/load_errors'\n);\n\n\n--- populating DIM tables from saging table as CTAS\n-- DROP table dbo.DimProduct\nCREATE TABLE dbo.DimProduct\nWITH\n(\n    DISTRIBUTION = HASH(ProductAltKey),\n    CLUSTERED COLUMNSTORE INDEX\n)\nAS\nSELECT \n    ROW_NUMBER() OVER(ORDER BY ProductID) AS ProductKey,\n    ProductID AS ProductAltKey,\n    ProductName,\n    ProductCategory,\n    Color,\n    Size,\n    ListPrice,\n    Discontinued\nFROM dbo.StageProduct;\n\n-- prepare DIM table for type2 slowley chnaging dims\n    -- add new columns\nALTER TABLE dbo.DimCustomer\nADD EffectiveFrom DATETIME NULL;\n\nALTER TABLE dbo.DimCustomer\nADD EffectiveTo DATETIME NULL;\n\nALTER TABLE dbo.DimCustomer\nADD IsCurrent VARCHAR(1) NULL;\n\n    -- populate data for existing rows\nUPDATE dbo.DimCustomer\nSET EffectiveFrom = '1753-01-01 00:00:00',\n    EffectiveTo = NULL,\n    IsCurrent = 'Y';\n\n-- populating DIM tables with slowly changing dimensions\n    -- new records\nINSERT INTO dbo.DimCustomer ([GeographyKey],[CustomerAlternateKey],[Title],[FirstName],[MiddleName],[LastName],[NameStyle],[BirthDate],[MaritalStatus],\n[Suffix],[Gender],[EmailAddress],[YearlyIncome],[TotalChildren],[NumberChildrenAtHome],[EnglishEducation],[SpanishEducation],[FrenchEducation],\n[EnglishOccupation],[SpanishOccupation],[FrenchOccupation],[HouseOwnerFlag],[NumberCarsOwned],[AddressLine1],[AddressLine2],[Phone],\n[DateFirstPurchase],[CommuteDistance])\nSELECT *\nFROM dbo.StageCustomer AS stg\nWHERE NOT EXISTS\n    (SELECT * FROM dbo.DimCustomer AS dim\n    WHERE dim.CustomerAlternateKey = stg.CustomerAlternateKey);\n\n    -- Type 1 updates (change name, email, or phone in place)\nUPDATE dbo.DimCustomer\nSET LastName = stg.LastName,\n    EmailAddress = stg.EmailAddress,\n    Phone = stg.Phone\nFROM DimCustomer dim inner join StageCustomer stg\nON dim.CustomerAlternateKey = stg.CustomerAlternateKey\nWHERE dim.LastName <> stg.LastName OR dim.EmailAddress <> stg.EmailAddress OR dim.Phone <> stg.Phone\n\n    -- Type 2 updates (address changes triggers new entry)\n        -- part 1 - existng record`s is_current to N\nUPDATE dbo.DimCustomer \nSET IsCurrent = 'N',\n    EffectiveTo = SYSDATETIME()\nFROM dbo.StageCustomer AS stg\nJOIN dbo.DimCustomer AS dim\nON stg.CustomerAlternateKey = dim.CustomerAlternateKey\nAND stg.AddressLine1 <> dim.AddressLine1;\n\n        -- part 2 - new records\nINSERT INTO dbo.DimCustomer\nSELECT stg.GeographyKey,stg.CustomerAlternateKey,stg.Title,stg.FirstName,stg.MiddleName,stg.LastName,stg.NameStyle,stg.BirthDate,stg.MaritalStatus,\nstg.Suffix,stg.Gender,stg.EmailAddress,stg.YearlyIncome,stg.TotalChildren,stg.NumberChildrenAtHome,stg.EnglishEducation,stg.SpanishEducation,stg.FrenchEducation,\nstg.EnglishOccupation,stg.SpanishOccupation,stg.FrenchOccupation,stg.HouseOwnerFlag,stg.NumberCarsOwned,stg.AddressLine1,stg.AddressLine2,stg.Phone,\nstg.DateFirstPurchase,stg.CommuteDistance, SYSDATETIME(), NULL, 'Y'\nFROM dbo.StageCustomer AS stg\nJOIN dbo.DimCustomer AS dim\nON stg.CustomerAlternateKey = dim.CustomerAlternateKey\nAND stg.AddressLine1 <> dim.AddressLine1;\n\n    -- confirming\nselect * from dbo.DimCustomer\nwhere CustomerAlternateKey = 'AW00011864'\n\n\n\n\n",
 					"metadata": {
@@ -210,6 +228,393 @@
 					"resultLimit": 5000
 				},
 				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/07 spark pool trasform data')]",
+			"type": "Microsoft.Synapse/workspaces/notebooks",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"nbformat": 4,
+				"nbformat_minor": 2,
+				"sessionProperties": {
+					"driverMemory": "28g",
+					"driverCores": 4,
+					"executorMemory": "28g",
+					"executorCores": 4,
+					"numExecutors": 2,
+					"conf": {
+						"spark.dynamicAllocation.enabled": "false",
+						"spark.dynamicAllocation.minExecutors": "2",
+						"spark.dynamicAllocation.maxExecutors": "2",
+						"spark.autotune.trackingId": "aa547f19-7251-4d0f-b4fd-5bb2c1e1abb5"
+					}
+				},
+				"metadata": {
+					"saveOutput": true,
+					"enableDebugMode": false,
+					"kernelspec": {
+						"name": "synapse_pyspark",
+						"display_name": "Synapse PySpark"
+					},
+					"language_info": {
+						"name": "python"
+					},
+					"sessionKeepAliveTimeout": 30
+				},
+				"cells": [
+					{
+						"cell_type": "markdown",
+						"metadata": {},
+						"source": [
+							"# Transform data by using Spark\n",
+							"\n",
+							"Apache Spark provides a distributed data processing platform that you can use to perform complex data transformations at scale.\n",
+							"\n",
+							"\n",
+							"## Load source data\n",
+							"\n",
+							"Let's start by loading some historical sales order data into a dataframe.\n",
+							"\n",
+							"Review the code in the cell below, which loads the sales order from all of the csv files within the **data** directory. Then click the **&#9655;** button to the left of the cell to run it.\n",
+							"\n",
+							"> **Note**: The first time you run a cell in a notebook, the Spark pool must be started; which can take several minutes."
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"collapsed": false
+						},
+						"source": [
+							"order_details = spark.read.csv('/data/*.csv', header=True, inferSchema=True)\n",
+							"display(order_details.limit(5))"
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"## Transform the data structure\r\n",
+							"\r\n",
+							"The source data includes a **CustomerName** field, that contains the customer's first and last name. Let's modify the dataframe to separate this field into separate **FirstName** and **LastName** fields."
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"from pyspark.sql.functions import split, col\r\n",
+							"\r\n",
+							"# Create the new FirstName and LastName fields\r\n",
+							"transformed_df = order_details.withColumn(\"FirstName\", split(col(\"CustomerName\"), \" \").getItem(0)).withColumn(\"LastName\", split(col(\"CustomerName\"), \" \").getItem(1))\r\n",
+							"\r\n",
+							"# Remove the CustomerName field\r\n",
+							"transformed_df = transformed_df.drop(\"CustomerName\")\r\n",
+							"\r\n",
+							"display(transformed_df.limit(5))"
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"The code above creates a new dataframe with the **CustomerName** field removed and two new **FirstName** and **LastName** fields.\r\n",
+							"\r\n",
+							"You can use the full power of the Spark SQL library to transform the data by filtering rows, deriving, removing, renaming columns, and any applying other required data modifications.\r\n",
+							"\r\n",
+							"## Save the transformed data\r\n",
+							"\r\n",
+							"After making the required changes to the data, you can save the results in a supported file format.\r\n",
+							"\r\n",
+							"> **Note**: Commonly, *Parquet* format is preferred for data files that you will use for further analysis or ingestion into an analytical store. Parquet is a very efficient format that is supported by most large scale data analytics systems. In fact, sometimes your data transformation requirement may simply be to convert data from another format (such as CSV) to Parquet!\r\n",
+							"\r\n",
+							"Use the following code to save the transformed dataframe in Parquet format (Overwriting the data if it already exists)."
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"transformed_df.write.mode(\"overwrite\").parquet('/transformed_data/orders.parquet')\r\n",
+							"print (\"Transformed data saved!\")"
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"In the **files** tab (which should still be open above), navigate to the root **files** container and verify that a new folder named **transformed_data** has been created, containing a file named **orders.parquet**. Then return to this notebook."
+						]
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"## Partition data\n",
+							"\n",
+							"A common way to optimize performance when dealing with large volumes of data is to partition the data files based on one or more field values. This can significant improve performance and make it easier to filter data.\n",
+							"\n",
+							"Use the following cell to derive new **Year** and **Month** fields and then save the resulting data in Parquet format, partitioned by year and month."
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"from pyspark.sql.functions import year, month, col\r\n",
+							"\r\n",
+							"dated_df = transformed_df.withColumn(\"Year\", year(col(\"OrderDate\"))).withColumn(\"Month\", month(col(\"OrderDate\")))\r\n",
+							"display(dated_df.limit(5))\r\n",
+							"dated_df.write.partitionBy(\"Year\",\"Month\").mode(\"overwrite\").parquet(\"/partitioned_data\")\r\n",
+							"print (\"Transformed data saved!\")"
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"In the **files** tab (which should still be open above), navigate to the root **files** container and verify that a new folder named **partitioned_data** has been created, containing a hierachy of folders in the format **Year=*NNNN*** / **Month=*N***, each containing a .parquet file for the orders placed in the corresponding year and month. Then return to this notebook.\r\n",
+							"\r\n",
+							"You can read this data into a dataframe from any folder in the hierarchy, using explicit values or wildcards for partitioning fields. For example, use the following code to get the sales orders placed in 2020 for all months."
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"orders_2020 = spark.read.parquet('/partitioned_data/Year=2020/Month=*')\r\n",
+							"display(orders_2020.limit(5))"
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"Note that the partitioning columns specified in the file path are omitted in the resulting dataframe.\r\n",
+							"\r\n",
+							"## Use SQL to transform data\r\n",
+							"\r\n",
+							"Spark is a very flexible platform, and the **SQL** library that provides the dataframe also enables you to work with data using SQL semantics. You can query and transform data in dataframes by using SQL queries, and persist the results as tables - which are metadata abstractions over files.\r\n",
+							"\r\n",
+							"First, use the following code to save the original sales orders data (loaded from CSV files) as a table. Technically, this is an *external* table because the **path** parameter is used to specify where the data files for the table are stored (an *internal* table is stored in the system storage for the Spark metastore and managed automatically)."
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"outputs_hidden": false,
+								"source_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"order_details.write.saveAsTable('sales_orders', format='parquet', mode='overwrite', path='/sales_orders_table')"
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"In the **files** tab (which should still be open above), navigate to the root **files** container and verify that a new folder named **sales_orders_table** has been created, containing parquet files for the table data. Then return to this notebook.\r\n",
+							"\r\n",
+							"Now that the table has been created, you can use SQL to transform it. For example, the following code derives new Year and Month columns and then saves the results as a partitioned external table."
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"sql_transform = spark.sql(\"SELECT *, YEAR(OrderDate) AS Year, MONTH(OrderDate) AS Month FROM sales_orders\")\r\n",
+							"display(sql_transform.limit(5))\r\n",
+							"sql_transform.write.partitionBy(\"Year\",\"Month\").saveAsTable('transformed_orders', format='parquet', mode='overwrite', path='/transformed_orders_table')"
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {},
+						"source": [
+							"In the **files** tab (which should still be open above), navigate to the root **files** container and verify that a new folder named **transformed_orders_table** has been created, containing a hierachy of folders in the format **Year=*NNNN*** / **Month=*N***, each containing a .parquet file for the orders placed in the corresponding year and month. Then return to this notebook.\n",
+							"\n",
+							"Essentially you've performed the same data transformation into partitioned parquet files as before, but by using SQL instead of native dataframe methods.\n",
+							"\n",
+							"You can read this data into a dataframe from any folder in the hierarchy as before, but because the data files are also abstracted by a table in the metastore, you can query the data directly using SQL."
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"microsoft": {
+								"language": "sparksql"
+							},
+							"collapsed": false
+						},
+						"source": [
+							"%%sql\r\n",
+							"\r\n",
+							"SELECT * FROM transformed_orders\r\n",
+							"WHERE Year = 2021\r\n",
+							"    AND Month = 1"
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"Because these are *external* tables, you can drop the tables from the metastore without deleting the files - so the transfomed data remains available for other downstream data analytics or ingestion processes."
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"microsoft": {
+								"language": "sparksql"
+							},
+							"collapsed": false
+						},
+						"source": [
+							"%%sql\r\n",
+							"\r\n",
+							"DROP TABLE transformed_orders;\r\n",
+							"DROP TABLE sales_orders;"
+						],
+						"outputs": [],
+						"execution_count": null
+					}
+				]
 			},
 			"dependsOn": []
 		},
