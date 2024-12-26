@@ -252,7 +252,7 @@
 						"spark.dynamicAllocation.enabled": "false",
 						"spark.dynamicAllocation.minExecutors": "2",
 						"spark.dynamicAllocation.maxExecutors": "2",
-						"spark.autotune.trackingId": "406e37fd-13ad-4539-a509-e0f97498ef69"
+						"spark.autotune.trackingId": "f366ce46-91b1-4328-a561-fb7cf0dbc6d0"
 					}
 				},
 				"metadata": {
@@ -314,6 +314,26 @@
 						],
 						"outputs": [],
 						"execution_count": 2
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"display(order_details.limit(5))"
+						],
+						"outputs": [],
+						"execution_count": 22
 					},
 					{
 						"cell_type": "code",
@@ -405,22 +425,113 @@
 								"transient": {
 									"deleting": false
 								}
+							}
+						},
+						"source": [
+							"order_details.columns"
+						],
+						"outputs": [],
+						"execution_count": 17
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
 							},
 							"collapsed": false
 						},
 						"source": [
+							"# select columns\r\n",
+							"order_details_s = order_details.select('OrderDate', 'SalesOrderNumber', 'TaxAmount')\r\n",
+							"# OR order_details_s = order_details['SalesOrderNumber', 'TaxAmount']\r\n",
+							"display(order_details_s.limit(10))"
+						],
+						"outputs": [],
+						"execution_count": 25
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"# select columns, filter\r\n",
+							"order_details_s = order_details.select('SalesOrderNumber', 'TaxAmount').where(order_details['Item'] == 'Mountain-200 Silver, 38')\r\n",
+							"display(order_details_s.limit(10))"
+						],
+						"outputs": [],
+						"execution_count": 27
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"# new columns\r\n",
 							"from pyspark.sql.functions import split, col\r\n",
 							"\r\n",
 							"# Create the new FirstName and LastName fields\r\n",
-							"transformed_df = order_details.withColumn(\"FirstName\", split(col(\"CustomerName\"), \" \").getItem(0)).withColumn(\"LastName\", split(col(\"CustomerName\"), \" \").getItem(1))\r\n",
+							"transformed_df = order_details.withColumn(\"FirstName\", split(col(\"CustomerName\"), \" \").getItem(0))\r\n",
+							"# transformed_df = transformed_df.withColumn(\"LastName\", split(col(\"CustomerName\"), \" \").getItem(1))\r\n",
+							"transformed_df = transformed_df.withColumn(\"LastName\", split(transformed_df[\"CustomerName\"], \" \").getItem(1))\r\n",
 							"\r\n",
 							"# Remove the CustomerName field\r\n",
-							"transformed_df = transformed_df.drop(\"CustomerName\")\r\n",
+							"transformed_df = transformed_df.drop(\"EmailAddress\")\r\n",
 							"\r\n",
 							"display(transformed_df.limit(5))"
 						],
 						"outputs": [],
-						"execution_count": null
+						"execution_count": 39
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"# group by \r\n",
+							"from pyspark.sql.functions import year\r\n",
+							"order_details_s = order_details.select('OrderDate', 'TaxAmount').withColumn('OrderYear', year(col('OrderDate'))).groupBy('OrderYear').sum('TaxAmount')\r\n",
+							"# OR order_details_s = order_details['SalesOrderNumber', 'TaxAmount']\r\n",
+							"display(order_details_s.limit(10))"
+						],
+						"outputs": [],
+						"execution_count": 38
 					},
 					{
 						"cell_type": "markdown",
@@ -432,10 +543,6 @@
 							}
 						},
 						"source": [
-							"The code above creates a new dataframe with the **CustomerName** field removed and two new **FirstName** and **LastName** fields.\r\n",
-							"\r\n",
-							"You can use the full power of the Spark SQL library to transform the data by filtering rows, deriving, removing, renaming columns, and any applying other required data modifications.\r\n",
-							"\r\n",
 							"## Save the transformed data\r\n",
 							"\r\n",
 							"After making the required changes to the data, you can save the results in a supported file format.\r\n",
@@ -459,11 +566,30 @@
 							}
 						},
 						"source": [
-							"transformed_df.write.mode(\"overwrite\").parquet('/transformed_data/orders.parquet')\r\n",
+							"rel_path = 'abfss://files@datalake9nlosdj.dfs.core.windows.net/spark_data'"
+						],
+						"outputs": [],
+						"execution_count": 40
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"transformed_df.write.mode(\"overwrite\").parquet(rel_path+'/transformed_data/orders.parquet')\r\n",
 							"print (\"Transformed data saved!\")"
 						],
 						"outputs": [],
-						"execution_count": null
+						"execution_count": 41
 					},
 					{
 						"cell_type": "markdown",
@@ -514,11 +640,11 @@
 							"\r\n",
 							"dated_df = transformed_df.withColumn(\"Year\", year(col(\"OrderDate\"))).withColumn(\"Month\", month(col(\"OrderDate\")))\r\n",
 							"display(dated_df.limit(5))\r\n",
-							"dated_df.write.partitionBy(\"Year\",\"Month\").mode(\"overwrite\").parquet(\"/partitioned_data\")\r\n",
+							"dated_df.write.partitionBy(\"Year\",\"Month\").mode(\"overwrite\").parquet(rel_path+\"/partitioned_data\")\r\n",
 							"print (\"Transformed data saved!\")"
 						],
 						"outputs": [],
-						"execution_count": null
+						"execution_count": 42
 					},
 					{
 						"cell_type": "markdown",
@@ -550,11 +676,24 @@
 							"collapsed": false
 						},
 						"source": [
-							"orders_2020 = spark.read.parquet('/partitioned_data/Year=2020/Month=*')\r\n",
-							"display(orders_2020.limit(5))"
+							"# read partitioned data\r\n",
+							"\r\n",
+							"# all months in 2020\r\n",
+							"orders_2020 = spark.read.parquet(rel_path+'/partitioned_data/Year=2020/Month=*')\r\n",
+							"display(orders_2020.limit(5))\r\n",
+							"\r\n",
+							"# all months in 2020 with Month column returned\r\n",
+							"orders_2020 = spark.read.parquet(rel_path+'/partitioned_data/Year=2020')\r\n",
+							"display(orders_2020.limit(5))\r\n",
+							"\r\n",
+							"# all months in 2020 with Year and Month column returned\r\n",
+							"orders_2020 = spark.read.parquet(rel_path+'/partitioned_data/')\r\n",
+							"display(orders_2020.limit(5))\r\n",
+							"\r\n",
+							""
 						],
 						"outputs": [],
-						"execution_count": null
+						"execution_count": 51
 					},
 					{
 						"cell_type": "markdown",
@@ -566,21 +705,28 @@
 							}
 						},
 						"source": [
-							"Note that the partitioning columns specified in the file path are omitted in the resulting dataframe.\r\n",
-							"\r\n",
-							"## Use SQL to transform data\r\n",
-							"\r\n",
-							"Spark is a very flexible platform, and the **SQL** library that provides the dataframe also enables you to work with data using SQL semantics. You can query and transform data in dataframes by using SQL queries, and persist the results as tables - which are metadata abstractions over files.\r\n",
-							"\r\n",
-							"First, use the following code to save the original sales orders data (loaded from CSV files) as a table. Technically, this is an *external* table because the **path** parameter is used to specify where the data files for the table are stored (an *internal* table is stored in the system storage for the Spark metastore and managed automatically)."
+							"## Write to tables"
+						]
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"### Temp views"
 						]
 					},
 					{
 						"cell_type": "code",
 						"metadata": {
 							"jupyter": {
-								"outputs_hidden": false,
-								"source_hidden": false
+								"source_hidden": false,
+								"outputs_hidden": false
 							},
 							"nteract": {
 								"transient": {
@@ -589,10 +735,12 @@
 							}
 						},
 						"source": [
-							"order_details.write.saveAsTable('sales_orders', format='parquet', mode='overwrite', path='/sales_orders_table')"
+							"dated_df.createOrReplaceTempView('dated_df')\r\n",
+							"\r\n",
+							"display(spark.sql('select * from dated_df'))"
 						],
 						"outputs": [],
-						"execution_count": null
+						"execution_count": 74
 					},
 					{
 						"cell_type": "markdown",
@@ -604,10 +752,92 @@
 							}
 						},
 						"source": [
-							"In the **files** tab (which should still be open above), navigate to the root **files** container and verify that a new folder named **sales_orders_table** has been created, containing parquet files for the table data. Then return to this notebook.\r\n",
-							"\r\n",
-							"Now that the table has been created, you can use SQL to transform it. For example, the following code derives new Year and Month columns and then saves the results as a partitioned external table."
+							"### External Tables"
 						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# from dataframe as parquet\r\n",
+							"transformed_df.write.saveAsTable('tblx_orders',mode='overwrite', format='parquet', path=rel_path+'/external_tables/tblx_orders')"
+						],
+						"outputs": [],
+						"execution_count": 54
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# from dataframe as csv\r\n",
+							"transformed_df.write.saveAsTable('tblx_orders_csv',mode='overwrite', format='csv', path=rel_path+'/external_tables/tblx_orders_csv')"
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# natively with existing files\r\n",
+							"spark.catalog.createExternalTable(\r\n",
+							"    'tblx_orders2', path=rel_path+'/transformed_data/orders.parquet/', source='parquet'\r\n",
+							")"
+						],
+						"outputs": [],
+						"execution_count": 55
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# natively with existing files with partitions\r\n",
+							"spark.catalog.createExternalTable(\r\n",
+							"    'tblx_orders3', path=rel_path+'/partitioned_data/', source='parquet', partitionBy=\"Year,Month\"\r\n",
+							")"
+						],
+						"outputs": [],
+						"execution_count": 68
 					},
 					{
 						"cell_type": "code",
@@ -624,22 +854,59 @@
 							"collapsed": false
 						},
 						"source": [
-							"sql_transform = spark.sql(\"SELECT *, YEAR(OrderDate) AS Year, MONTH(OrderDate) AS Month FROM sales_orders\")\r\n",
-							"display(sql_transform.limit(5))\r\n",
-							"sql_transform.write.partitionBy(\"Year\",\"Month\").saveAsTable('transformed_orders', format='parquet', mode='overwrite', path='/transformed_orders_table')"
+							"# list databases\r\n",
+							"display(spark.catalog.listDatabases())"
 						],
 						"outputs": [],
-						"execution_count": null
+						"execution_count": 72
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"# list tables\r\n",
+							"display(spark.catalog.listTables())"
+						],
+						"outputs": [],
+						"execution_count": 71
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"df = spark.sql(\"SELECT * FROM tblx_orders3\")\r\n",
+							"display(df.limit(10))"
+						],
+						"outputs": [],
+						"execution_count": 69
 					},
 					{
 						"cell_type": "markdown",
 						"metadata": {},
 						"source": [
-							"In the **files** tab (which should still be open above), navigate to the root **files** container and verify that a new folder named **transformed_orders_table** has been created, containing a hierachy of folders in the format **Year=*NNNN*** / **Month=*N***, each containing a .parquet file for the orders placed in the corresponding year and month. Then return to this notebook.\n",
-							"\n",
-							"Essentially you've performed the same data transformation into partitioned parquet files as before, but by using SQL instead of native dataframe methods.\n",
-							"\n",
-							"You can read this data into a dataframe from any folder in the hierarchy as before, but because the data files are also abstracted by a table in the metastore, you can query the data directly using SQL."
+							"## SQL"
 						]
 					},
 					{
@@ -653,25 +920,12 @@
 						"source": [
 							"%%sql\r\n",
 							"\r\n",
-							"SELECT * FROM transformed_orders\r\n",
+							"SELECT * FROM dated_df\r\n",
 							"WHERE Year = 2021\r\n",
 							"    AND Month = 1"
 						],
 						"outputs": [],
-						"execution_count": null
-					},
-					{
-						"cell_type": "markdown",
-						"metadata": {
-							"nteract": {
-								"transient": {
-									"deleting": false
-								}
-							}
-						},
-						"source": [
-							"Because these are *external* tables, you can drop the tables from the metastore without deleting the files - so the transfomed data remains available for other downstream data analytics or ingestion processes."
-						]
+						"execution_count": 80
 					},
 					{
 						"cell_type": "code",
