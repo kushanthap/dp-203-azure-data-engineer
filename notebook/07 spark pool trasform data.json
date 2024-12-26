@@ -17,7 +17,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "2",
 				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "aae10d9c-2f92-4655-ba31-5e403194c03d"
+				"spark.autotune.trackingId": "f9373864-7a40-4929-aaa3-a5b6e3ba836c"
 			}
 		},
 		"metadata": {
@@ -77,6 +77,25 @@
 					"display(order_details.limit(5))"
 				],
 				"execution_count": 2
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"display(order_details.limit(5))"
+				],
+				"execution_count": 22
 			},
 			{
 				"cell_type": "code",
@@ -166,21 +185,108 @@
 						"transient": {
 							"deleting": false
 						}
+					}
+				},
+				"source": [
+					"order_details.columns"
+				],
+				"execution_count": 17
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
 					},
 					"collapsed": false
 				},
 				"source": [
+					"# select columns\r\n",
+					"order_details_s = order_details.select('OrderDate', 'SalesOrderNumber', 'TaxAmount')\r\n",
+					"# OR order_details_s = order_details['SalesOrderNumber', 'TaxAmount']\r\n",
+					"display(order_details_s.limit(10))"
+				],
+				"execution_count": 25
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"# select columns, filter\r\n",
+					"order_details_s = order_details.select('SalesOrderNumber', 'TaxAmount').where(order_details['Item'] == 'Mountain-200 Silver, 38')\r\n",
+					"display(order_details_s.limit(10))"
+				],
+				"execution_count": 27
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"# new columns\r\n",
 					"from pyspark.sql.functions import split, col\r\n",
 					"\r\n",
 					"# Create the new FirstName and LastName fields\r\n",
-					"transformed_df = order_details.withColumn(\"FirstName\", split(col(\"CustomerName\"), \" \").getItem(0)).withColumn(\"LastName\", split(col(\"CustomerName\"), \" \").getItem(1))\r\n",
+					"transformed_df = order_details.withColumn(\"FirstName\", split(col(\"CustomerName\"), \" \").getItem(0))\r\n",
+					"# transformed_df = transformed_df.withColumn(\"LastName\", split(col(\"CustomerName\"), \" \").getItem(1))\r\n",
+					"transformed_df = transformed_df.withColumn(\"LastName\", split(transformed_df[\"CustomerName\"], \" \").getItem(1))\r\n",
 					"\r\n",
 					"# Remove the CustomerName field\r\n",
-					"transformed_df = transformed_df.drop(\"CustomerName\")\r\n",
+					"transformed_df = transformed_df.drop(\"EmailAddress\")\r\n",
 					"\r\n",
 					"display(transformed_df.limit(5))"
 				],
-				"execution_count": null
+				"execution_count": 39
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"# group by \r\n",
+					"from pyspark.sql.functions import year\r\n",
+					"order_details_s = order_details.select('OrderDate', 'TaxAmount').withColumn('OrderYear', year(col('OrderDate'))).groupBy('OrderYear').sum('TaxAmount')\r\n",
+					"# OR order_details_s = order_details['SalesOrderNumber', 'TaxAmount']\r\n",
+					"display(order_details_s.limit(10))"
+				],
+				"execution_count": 38
 			},
 			{
 				"cell_type": "markdown",
@@ -192,10 +298,6 @@
 					}
 				},
 				"source": [
-					"The code above creates a new dataframe with the **CustomerName** field removed and two new **FirstName** and **LastName** fields.\r\n",
-					"\r\n",
-					"You can use the full power of the Spark SQL library to transform the data by filtering rows, deriving, removing, renaming columns, and any applying other required data modifications.\r\n",
-					"\r\n",
 					"## Save the transformed data\r\n",
 					"\r\n",
 					"After making the required changes to the data, you can save the results in a supported file format.\r\n",
@@ -219,10 +321,28 @@
 					}
 				},
 				"source": [
-					"transformed_df.write.mode(\"overwrite\").parquet('/transformed_data/orders.parquet')\r\n",
+					"rel_path = 'abfss://files@datalake9nlosdj.dfs.core.windows.net/spark_data'"
+				],
+				"execution_count": 40
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"transformed_df.write.mode(\"overwrite\").parquet(rel_path+'/transformed_data/orders.parquet')\r\n",
 					"print (\"Transformed data saved!\")"
 				],
-				"execution_count": null
+				"execution_count": 41
 			},
 			{
 				"cell_type": "markdown",
@@ -273,10 +393,10 @@
 					"\r\n",
 					"dated_df = transformed_df.withColumn(\"Year\", year(col(\"OrderDate\"))).withColumn(\"Month\", month(col(\"OrderDate\")))\r\n",
 					"display(dated_df.limit(5))\r\n",
-					"dated_df.write.partitionBy(\"Year\",\"Month\").mode(\"overwrite\").parquet(\"/partitioned_data\")\r\n",
+					"dated_df.write.partitionBy(\"Year\",\"Month\").mode(\"overwrite\").parquet(rel_path+\"/partitioned_data\")\r\n",
 					"print (\"Transformed data saved!\")"
 				],
-				"execution_count": null
+				"execution_count": 42
 			},
 			{
 				"cell_type": "markdown",
@@ -308,10 +428,222 @@
 					"collapsed": false
 				},
 				"source": [
-					"orders_2020 = spark.read.parquet('/partitioned_data/Year=2020/Month=*')\r\n",
-					"display(orders_2020.limit(5))"
+					"# read partitioned data\r\n",
+					"\r\n",
+					"# all months in 2020\r\n",
+					"orders_2020 = spark.read.parquet(rel_path+'/partitioned_data/Year=2020/Month=*')\r\n",
+					"display(orders_2020.limit(5))\r\n",
+					"\r\n",
+					"# all months in 2020 with Month column returned\r\n",
+					"orders_2020 = spark.read.parquet(rel_path+'/partitioned_data/Year=2020')\r\n",
+					"display(orders_2020.limit(5))\r\n",
+					"\r\n",
+					"# all months in 2020 with Year and Month column returned\r\n",
+					"orders_2020 = spark.read.parquet(rel_path+'/partitioned_data/')\r\n",
+					"display(orders_2020.limit(5))\r\n",
+					"\r\n",
+					""
+				],
+				"execution_count": 51
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"## Write to tables"
+				]
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"### Temp views"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"dated_df.createOrReplaceTempView('dated_df')\r\n",
+					"\r\n",
+					"display(spark.sql('select * from dated_df'))"
+				],
+				"execution_count": 74
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"### External Tables"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"# from dataframe as parquet\r\n",
+					"transformed_df.write.saveAsTable('tblx_orders',mode='overwrite', format='parquet', path=rel_path+'/external_tables/tblx_orders')"
+				],
+				"execution_count": 54
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"# from dataframe as csv\r\n",
+					"transformed_df.write.saveAsTable('tblx_orders_csv',mode='overwrite', format='csv', path=rel_path+'/external_tables/tblx_orders_csv')"
 				],
 				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"# natively with existing files\r\n",
+					"spark.catalog.createExternalTable(\r\n",
+					"    'tblx_orders2', path=rel_path+'/transformed_data/orders.parquet/', source='parquet'\r\n",
+					")"
+				],
+				"execution_count": 55
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"# natively with existing files with partitions\r\n",
+					"spark.catalog.createExternalTable(\r\n",
+					"    'tblx_orders3', path=rel_path+'/partitioned_data/', source='parquet', partitionBy=\"Year,Month\"\r\n",
+					")"
+				],
+				"execution_count": 68
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"# list databases\r\n",
+					"display(spark.catalog.listDatabases())"
+				],
+				"execution_count": 72
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"# list tables\r\n",
+					"display(spark.catalog.listTables())"
+				],
+				"execution_count": 71
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"df = spark.sql(\"SELECT * FROM tblx_orders3\")\r\n",
+					"display(df.limit(10))"
+				],
+				"execution_count": 69
 			},
 			{
 				"cell_type": "markdown",
