@@ -1,6 +1,9 @@
 {
 	"name": "04 serverless pool security",
 	"properties": {
+		"folder": {
+			"name": "serverless sql pool"
+		},
 		"content": {
 			"query": "use Sales \ngo\n\n-- create login \nCREATE LOGIN [test@dilrukshinioutlook.onmicrosoft.com] from external provider;\n\n-- create user\nCREATE USER test from LOGIN [test@dilrukshinioutlook.onmicrosoft.com]\n\n-- add user\nALTER ROLE db_datareader\nADD MEMBER test\n",
 			"metadata": {

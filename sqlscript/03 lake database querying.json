@@ -1,6 +1,9 @@
 {
-	"name": "03 Lake database querying",
+	"name": "03 lake database querying",
 	"properties": {
+		"folder": {
+			"name": "serverless sql pool"
+		},
 		"content": {
 			"query": "-- general lake db queries\nSELECT TOP (100) [CustomerId]\n,[FirstName]\n,[LastName]\n,[EmailAddress]\n,[Phone]\n FROM [RetailDB].[dbo].[Customer]\n\n SELECT TOP (100) *\n FROM [RetailDB].[dbo].[Product]\n\n SELECT TOP (100) *\n FROM [RetailDB].[dbo].[SalesOrder]\n\n\nSELECT \n    o.SalesOrderID, \n    c.EmailAddress, \n    p.ProductName, \n    o.Quantity\nFROM \n    SalesOrder AS o\nJOIN Customer AS c \n    ON o.CustomerId = c.CustomerId\nJOIN Product AS p \n    ON o.ProductId = p.ProductId\n\n-- insert records *** NOT POSSIBLE ***\nINSERT INTO [RetailDB].[dbo].[SalesOrder]\nVALUES (99999, CAST('2022-01-01' AS Datetime), 1, 6, 5, 1)\n\n\n-- create new external table\n    -- **** NOT POSSIBLE ****\n    -- can`t use CREATE EXTERNAL DATA SOURCE, CREATE EXTERNAL FILE FORMAT\n\n-- create views\n\nCREATE SCHEMA Sales\n\nCREATE VIEW Sales.SalesOrderView AS\nSELECT *\nFROM \n    [RetailDB].[dbo].[SalesOrder];\n\nSELECT *\nFROM \n    [RetailDB].[Sales].[SalesOrderView];\n\n",
 			"metadata": {
