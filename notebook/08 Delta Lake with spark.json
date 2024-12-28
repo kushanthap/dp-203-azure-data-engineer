@@ -17,7 +17,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "2",
 				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "e57618b1-752b-4c09-a4b1-d7dc86a66c06"
+				"spark.autotune.trackingId": "e7673b2d-8951-4a41-9ad5-d50254113f82"
 			}
 		},
 		"metadata": {
@@ -75,7 +75,7 @@
 					")\r\n",
 					"display(df.limit(10))"
 				],
-				"execution_count": 3
+				"execution_count": 34
 			},
 			{
 				"cell_type": "code",
@@ -141,9 +141,9 @@
 				},
 				"source": [
 					"# writing df as delta file\r\n",
-					"df.write.format(\"delta\").mode('append').save(delta_table_path)"
+					"df.write.format(\"delta\").mode('overwrite').save(delta_table_path)"
 				],
-				"execution_count": 17
+				"execution_count": 35
 			},
 			{
 				"cell_type": "markdown",
@@ -176,7 +176,7 @@
 					"spark_delta_df = spark.read.load(path=delta_table_path, format=\"delta\")\r\n",
 					"display(spark_delta_df.limit(10))"
 				],
-				"execution_count": 23
+				"execution_count": 38
 			},
 			{
 				"cell_type": "code",
@@ -195,13 +195,17 @@
 				"source": [
 					"# adding new rows -----------\r\n",
 					"# reading new rows\r\n",
-					"df = spark.read.load(root_folder+'/dp-203/Allfiles/labs/07/data2//new_product.txt', format='csv'\r\n",
+					"df_new = spark.read.load(root_folder+'/dp-203/Allfiles/labs/07/data2//new_product.txt', format='csv'\r\n",
 					", header=True\r\n",
 					")\r\n",
+					"# display(df.limit(10))\r\n",
+					"df_new.write.format('delta').mode('append').save(delta_table_path)\r\n",
 					"\r\n",
-					"df.write.format('delta').mode('append').save('delta_table_path')"
+					"spark_delta_df = spark.read.load(path=delta_table_path, format=\"delta\")\r\n",
+					"display(spark_delta_df.orderBy('productID').limit(10))\r\n",
+					""
 				],
-				"execution_count": 28
+				"execution_count": 40
 			},
 			{
 				"cell_type": "markdown",
@@ -237,7 +241,7 @@
 					"# Create a deltaTable object\r\n",
 					"deltaTable = DeltaTable.forPath(spark, delta_table_path)"
 				],
-				"execution_count": 18
+				"execution_count": 41
 			},
 			{
 				"cell_type": "code",
@@ -258,9 +262,9 @@
 					"display(deltaTable.toDF().limit(10))\r\n",
 					"\r\n",
 					"# View the updated data as a dataframe - alternative way\r\n",
-					"deltaTable.toDF().show(10)"
+					"deltaTable.toDF().orderBy('productID').show(10)"
 				],
-				"execution_count": 22
+				"execution_count": 50
 			},
 			{
 				"cell_type": "code",
@@ -280,15 +284,31 @@
 					"deltaTable.update(\r\n",
 					"    condition = \"ProductID == 771\",\r\n",
 					"    set = { \"ListPrice\": \"ListPrice * 0.9\" }\r\n",
-					")\r\n",
-					"\r\n",
-					"# another change\r\n",
-					"deltaTable.update(\r\n",
-					"    condition = \"ProductID == 772\",\r\n",
-					"    set = { \"ListPrice\": \"ListPrice * 1.1\" }\r\n",
 					")"
 				],
-				"execution_count": 20
+				"execution_count": 44
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"# Update the table - to one of the later appended rows \r\n",
+					"deltaTable.update(\r\n",
+					"    condition = \"ProductID == 600\",\r\n",
+					"    set = { \"ListPrice\": \"ListPrice * 0.9\" }\r\n",
+					")"
+				],
+				"execution_count": 47
 			},
 			{
 				"cell_type": "code",
@@ -309,7 +329,28 @@
 					"    condition=\"ProductID == 773\"\r\n",
 					")"
 				],
-				"execution_count": 21
+				"execution_count": 49
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"# delete record - one of the later appended rows \r\n",
+					"deltaTable.delete(\r\n",
+					"    condition=\"ProductID == 600\"\r\n",
+					")"
+				],
+				"execution_count": 52
 			},
 			{
 				"cell_type": "markdown",
