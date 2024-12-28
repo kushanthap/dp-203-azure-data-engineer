@@ -17,7 +17,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "2",
 				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "93f2532f-4136-4489-8d42-7e6740f886a0"
+				"spark.autotune.trackingId": "c9d29c33-1c05-4938-9149-c7681389a7fd"
 			}
 		},
 		"metadata": {
@@ -76,7 +76,7 @@
 					"order_details = spark.read.csv(root_folder+'/data/*.csv', header=True, inferSchema=True)\n",
 					"display(order_details.limit(5))"
 				],
-				"execution_count": 2
+				"execution_count": 1
 			},
 			{
 				"cell_type": "code",
@@ -263,7 +263,7 @@
 					"\r\n",
 					"display(transformed_df.limit(5))"
 				],
-				"execution_count": 39
+				"execution_count": 2
 			},
 			{
 				"cell_type": "code",
@@ -323,7 +323,7 @@
 				"source": [
 					"rel_path = 'abfss://files@datalake9nlosdj.dfs.core.windows.net/spark_data'"
 				],
-				"execution_count": 40
+				"execution_count": 8
 			},
 			{
 				"cell_type": "code",
@@ -502,7 +502,34 @@
 					}
 				},
 				"source": [
-					"### External Tables"
+					"### Categlog Tables"
+				]
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"#### From Dataframe"
+				]
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"##### External Tables\r\n",
+					"Specify a path"
 				]
 			},
 			{
@@ -519,6 +546,7 @@
 					}
 				},
 				"source": [
+					"# EXTERNAL TABLE\r\n",
 					"# from dataframe as parquet\r\n",
 					"transformed_df.write.saveAsTable('tblx_orders',mode='overwrite', format='parquet', path=rel_path+'/external_tables/tblx_orders')"
 				],
@@ -586,6 +614,37 @@
 				"execution_count": 68
 			},
 			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"##### Managed (Internal) Tables"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"transformed_df.write.saveAsTable('tbl_orders',mode='overwrite', format='parquet')"
+				],
+				"execution_count": 5
+			},
+			{
 				"cell_type": "code",
 				"metadata": {
 					"jupyter": {
@@ -603,7 +662,7 @@
 					"# list databases\r\n",
 					"display(spark.catalog.listDatabases())"
 				],
-				"execution_count": 72
+				"execution_count": 3
 			},
 			{
 				"cell_type": "code",
@@ -623,7 +682,7 @@
 					"# list tables\r\n",
 					"display(spark.catalog.listTables())"
 				],
-				"execution_count": 71
+				"execution_count": 10
 			},
 			{
 				"cell_type": "code",
@@ -690,6 +749,65 @@
 					"\r\n",
 					"DROP TABLE transformed_orders;\r\n",
 					"DROP TABLE sales_orders;"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\r\n",
+					"\r\n",
+					"-- Catelog table - EXTERNAL\r\n",
+					"CREATE TABLE tbl_orders_sql\r\n",
+					"USING PARQUET\r\n",
+					"LOCATION 'abfss://files@datalake9nlosdj.dfs.core.windows.net/spark_data/transformed_data/orders.parquet'"
+				],
+				"execution_count": 9
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "sparksql"
+					}
+				},
+				"source": [
+					"%%sql\r\n",
+					"-- Catelog table - Managed or External with empty folder\r\n",
+					"%%sql\r\n",
+					"\r\n",
+					"CREATE TABLE Tbl_ManagedSalesOrders\r\n",
+					"(\r\n",
+					"    Orderid INT NOT NULL,\r\n",
+					"    OrderDate TIMESTAMP NOT NULL,\r\n",
+					"    CustomerName STRING,\r\n",
+					"    SalesTotal FLOAT NOT NULL\r\n",
+					")\r\n",
+					"USING PARQUET"
 				],
 				"execution_count": null
 			}
