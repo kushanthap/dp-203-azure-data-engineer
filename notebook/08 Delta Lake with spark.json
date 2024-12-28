@@ -1,8 +1,12 @@
 {
-	"name": "Notebook 1",
+	"name": "08 Delta Lake with spark",
 	"properties": {
 		"nbformat": 4,
 		"nbformat_minor": 2,
+		"bigDataPool": {
+			"referenceName": "spark9nlosdj",
+			"type": "BigDataPoolReference"
+		},
 		"sessionProperties": {
 			"driverMemory": "28g",
 			"driverCores": 4,
@@ -13,7 +17,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "2",
 				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "6839db07-4376-407b-9d45-c09b712b473e"
+				"spark.autotune.trackingId": "e57618b1-752b-4c09-a4b1-d7dc86a66c06"
 			}
 		},
 		"metadata": {
@@ -21,16 +25,318 @@
 			"enableDebugMode": false,
 			"kernelspec": {
 				"name": "synapse_pyspark",
-				"display_name": "python"
+				"display_name": "Synapse PySpark"
 			},
 			"language_info": {
 				"name": "python"
+			},
+			"a365ComputeOptions": {
+				"id": "/subscriptions/3ab7621d-8ee4-445a-8dd2-8b1f6718c4dc/resourceGroups/dp203-9nlosdj/providers/Microsoft.Synapse/workspaces/synapse9nlosdj/bigDataPools/spark9nlosdj",
+				"name": "spark9nlosdj",
+				"type": "Spark",
+				"endpoint": "https://synapse9nlosdj.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/spark9nlosdj",
+				"auth": {
+					"type": "AAD",
+					"authResource": "https://dev.azuresynapse.net"
+				},
+				"sparkVersion": "3.4",
+				"nodeCount": 3,
+				"cores": 4,
+				"memory": 28,
+				"automaticScaleJobs": false
 			},
 			"sessionKeepAliveTimeout": 30
 		},
 		"cells": [
 			{
 				"cell_type": "code",
+				"source": [
+					"root_folder = 'abfss://files@datalake9nlosdj.dfs.core.windows.net'"
+				],
+				"execution_count": 2
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"df = spark.read.load(root_folder+'/dp-203/Allfiles/labs/07/data//products.csv', format='csv'\r\n",
+					", header=True\r\n",
+					")\r\n",
+					"display(df.limit(10))"
+				],
+				"execution_count": 3
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"df.printSchema()"
+				],
+				"execution_count": 4
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"delta_table_path = root_folder+'/delta_lake/products'"
+				],
+				"execution_count": 6
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"## Writing as Delta format"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"# writing df as delta file\r\n",
+					"df.write.format(\"delta\").mode('append').save(delta_table_path)"
+				],
+				"execution_count": 17
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"## Loading as Spark DF"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"spark_delta_df = spark.read.load(path=delta_table_path, format=\"delta\")\r\n",
+					"display(spark_delta_df.limit(10))"
+				],
+				"execution_count": 23
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"# adding new rows -----------\r\n",
+					"# reading new rows\r\n",
+					"df = spark.read.load(root_folder+'/dp-203/Allfiles/labs/07/data2//new_product.txt', format='csv'\r\n",
+					", header=True\r\n",
+					")\r\n",
+					"\r\n",
+					"df.write.format('delta').mode('append').save('delta_table_path')"
+				],
+				"execution_count": 28
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"## Loading data as Delta table"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"# loading data as Delta Table\r\n",
+					"from delta.tables import DeltaTable\r\n",
+					"# from pyspark.sql.functions import *\r\n",
+					"\r\n",
+					"# Create a deltaTable object\r\n",
+					"deltaTable = DeltaTable.forPath(spark, delta_table_path)"
+				],
+				"execution_count": 18
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"# View the updated data as a dataframe\r\n",
+					"display(deltaTable.toDF().limit(10))\r\n",
+					"\r\n",
+					"# View the updated data as a dataframe - alternative way\r\n",
+					"deltaTable.toDF().show(10)"
+				],
+				"execution_count": 22
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"# Update the table (reduce price of product 771 by 10%)\r\n",
+					"deltaTable.update(\r\n",
+					"    condition = \"ProductID == 771\",\r\n",
+					"    set = { \"ListPrice\": \"ListPrice * 0.9\" }\r\n",
+					")\r\n",
+					"\r\n",
+					"# another change\r\n",
+					"deltaTable.update(\r\n",
+					"    condition = \"ProductID == 772\",\r\n",
+					"    set = { \"ListPrice\": \"ListPrice * 1.1\" }\r\n",
+					")"
+				],
+				"execution_count": 20
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"# delete record\r\n",
+					"deltaTable.delete(\r\n",
+					"    condition=\"ProductID == 773\"\r\n",
+					")"
+				],
+				"execution_count": 21
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"## Querying"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
 				"source": [
 					""
 				],
