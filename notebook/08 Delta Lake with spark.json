@@ -17,7 +17,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "2",
 				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "e7673b2d-8951-4a41-9ad5-d50254113f82"
+				"spark.autotune.trackingId": "263765ca-14bb-43a5-98c5-bc016e0a1b81"
 			}
 		},
 		"metadata": {
@@ -75,7 +75,7 @@
 					")\r\n",
 					"display(df.limit(10))"
 				],
-				"execution_count": 34
+				"execution_count": 3
 			},
 			{
 				"cell_type": "code",
@@ -93,7 +93,7 @@
 				"source": [
 					"df.printSchema()"
 				],
-				"execution_count": 4
+				"execution_count": 13
 			},
 			{
 				"cell_type": "code",
@@ -111,7 +111,7 @@
 				"source": [
 					"delta_table_path = root_folder+'/delta_lake/products'"
 				],
-				"execution_count": 6
+				"execution_count": 4
 			},
 			{
 				"cell_type": "markdown",
@@ -205,7 +205,7 @@
 					"display(spark_delta_df.orderBy('productID').limit(10))\r\n",
 					""
 				],
-				"execution_count": 40
+				"execution_count": 11
 			},
 			{
 				"cell_type": "markdown",
@@ -353,6 +353,25 @@
 				"execution_count": 52
 			},
 			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"# history of changes\r\n",
+					"deltaTable.history(10).show(20, False, True)"
+				],
+				"execution_count": 64
+			},
+			{
 				"cell_type": "markdown",
 				"metadata": {
 					"nteract": {
@@ -362,7 +381,60 @@
 					}
 				},
 				"source": [
-					"## Querying"
+					"## Querying versions"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"df = spark.read.format(\"delta\").option(\"versionAsOf\", 3).load(delta_table_path)\r\n",
+					"display(df.orderBy('ProductID').limit(10))"
+				],
+				"execution_count": 56
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"df = spark.read.format(\"delta\").option(\"timestampAsOf\", '2024-12-28 09:20:35').load(delta_table_path)\r\n",
+					"display(df.orderBy('ProductID').limit(10))"
+				],
+				"execution_count": 60
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"## Creating catelog tables"
 				]
 			},
 			{
@@ -379,9 +451,409 @@
 					}
 				},
 				"source": [
+					"from delta.tables import DeltaTable\r\n",
+					"\r\n",
+					"DeltaTable.create(spark) \\\r\n",
+					"  .tableName(\"default.ManagedProducts\") \\\r\n",
+					"  .addColumn(\"Productid\", \"INT\") \\\r\n",
+					"  .addColumn(\"ProductName\", \"STRING\") \\\r\n",
+					"  .addColumn(\"Category\", \"STRING\") \\\r\n",
+					"  .addColumn(\"Price\", \"FLOAT\") \\\r\n",
+					"  .execute()"
+				],
+				"execution_count": 6
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"## Streaming dataset"
+				]
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"#### As source"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"delta_table_path_stream_source = root_folder+'/delta_lake/products_stream_source'\r\n",
+					"delta_table_path_stream_sink = root_folder+'/delta_lake/products_stream_sink'\r\n",
+					"delta_table_path_stream_sink_cp = root_folder+'/delta_lake/products_stream_sink_checkpoint'\r\n",
+					"\r\n",
 					""
 				],
-				"execution_count": null
+				"execution_count": 29
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"# --------- preapring delta folder with empty folder\r\n",
+					"# Define the schema \r\n",
+					"from pyspark.sql.types import *\r\n",
+					"schema = StructType([ \r\n",
+					"    StructField(\"ProductID\", StringType(), True), \r\n",
+					"    StructField(\"ProductName\", StringType(), True), \r\n",
+					"    StructField(\"Category\", StringType(), True), \r\n",
+					"    StructField(\"ListPrice\", StringType(), True)\r\n",
+					"])\r\n",
+					"# Create an empty DataFrame with the schema \r\n",
+					"empty_df = spark.createDataFrame([], schema) \r\n",
+					"# Write the empty DataFrame to the Delta table location \r\n",
+					"empty_df.write.format(\"delta\").save(delta_table_path_stream_source)"
+				],
+				"execution_count": 17
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"# Load a streaming dataframe from the Delta Table\r\n",
+					"stream_df = spark.readStream.format(\"delta\") \\\r\n",
+					"    .option(\"ignoreChanges\", \"true\") \\\r\n",
+					"    .load(delta_table_path_stream_source)"
+				],
+				"execution_count": 21
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"# Now you can process the streaming data in the dataframe\r\n",
+					"# for example, write to data lake\r\n",
+					"q = stream_df.writeStream \\\r\n",
+					"    .outputMode(\"append\") \\\r\n",
+					"    .format(\"delta\").option(\"checkpointLocation\", delta_table_path_stream_sink_cp) \\\r\n",
+					"    .start(delta_table_path_stream_sink)"
+				],
+				"execution_count": 30
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"# updating source to trigger sinking\r\n",
+					"# read new data with the schema \r\n",
+					"prod_id = 503\r\n",
+					"df_new = spark.read.load(path=root_folder+'/dp-203/Allfiles/labs/07/data_append/new_product_{}.csv'.format(prod_id), format='csv', schema=schema)\r\n",
+					"# Write the new DataFrame to the Delta table location \r\n",
+					"df_new.write.format(\"delta\").save(delta_table_path_stream_source, mode='append')"
+				],
+				"execution_count": 39
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"# for monitor\r\n",
+					"from delta.tables import DeltaTable\r\n",
+					"\r\n",
+					"deltaTable_source = DeltaTable.forPath(spark, delta_table_path_stream_source)\r\n",
+					"deltaTable_sink = DeltaTable.forPath(spark, delta_table_path_stream_sink)"
+				],
+				"execution_count": 32
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"# monitor here\r\n",
+					"display(deltaTable_source.toDF().limit(10))\r\n",
+					"display(deltaTable_sink.toDF().limit(10))"
+				],
+				"execution_count": 40
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"# stop\r\n",
+					"q.stop()"
+				],
+				"execution_count": 38
+			},
+			{
+				"cell_type": "markdown",
+				"metadata": {
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"#### As sink"
+				]
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"source_files_path = root_folder+'/dp-203/Allfiles/labs/07/json_file_drop'\r\n",
+					"delta_table_path_stream_sink = root_folder+'/delta_lake/sink_demo_sink'\r\n",
+					"delta_table_path_stream_sink_cp = root_folder+'/delta_lake/sink_demo_checkpoint'"
+				],
+				"execution_count": 66
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"from pyspark.sql.types import *\r\n",
+					"from pyspark.sql.functions import *\r\n",
+					"\r\n",
+					"# Create a stream that reads JSON data from a folder\r\n",
+					"jsonSchema = StructType([\r\n",
+					"    StructField(\"device\", StringType(), False),\r\n",
+					"    StructField(\"status\", StringType(), False)\r\n",
+					"])\r\n",
+					"stream_df = spark.readStream.schema(jsonSchema).option(\"maxFilesPerTrigger\", 1).json(source_files_path)"
+				],
+				"execution_count": 67
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"df_json = spark.read.json(source_files_path, schema=jsonSchema)"
+				],
+				"execution_count": 72
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"display(df_json)"
+				],
+				"execution_count": 73
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"# Write the stream to a delta table\r\n",
+					"delta_stream = stream_df.writeStream.format(\"delta\").option(\"checkpointLocation\", delta_table_path_stream_sink_cp).start(delta_table_path_stream_sink)"
+				],
+				"execution_count": 68
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql\r\n",
+					"\r\n",
+					"CREATE TABLE sink_demo\r\n",
+					"USING DELTA \r\n",
+					"LOCATION 'abfss://files@datalake9nlosdj.dfs.core.windows.net/delta_lake/sink_demo_sink'"
+				],
+				"execution_count": 46
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql \r\n",
+					"SELECT device, status\r\n",
+					"FROM sink_demo;"
+				],
+				"execution_count": 71
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"delta_stream.stop()\r\n",
+					""
+				],
+				"execution_count": 65
 			}
 		]
 	}
