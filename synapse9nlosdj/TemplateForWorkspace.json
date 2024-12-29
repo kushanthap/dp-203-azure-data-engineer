@@ -7,6 +7,11 @@
 			"metadata": "Workspace name",
 			"defaultValue": "synapse9nlosdj"
 		},
+		"Data_Warehouse_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'Data_Warehouse'",
+			"defaultValue": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=synapse9nlosdj.sql.azuresynapse.net;Initial Catalog=sql9nlosdj"
+		},
 		"synapse9nlosdj-WorkspaceDefaultSqlServer_connectionString": {
 			"type": "secureString",
 			"metadata": "Secure string for 'connectionString' of 'synapse9nlosdj-WorkspaceDefaultSqlServer'",
@@ -21,6 +26,188 @@
 		"workspaceId": "[concat('Microsoft.Synapse/workspaces/', parameters('workspaceName'))]"
 	},
 	"resources": [
+		{
+			"name": "[concat(parameters('workspaceName'), '/10 Load Product Data')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "LoadProducts",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "10_LoadProductsData",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"ProductsText": {},
+									"ProductTable": {},
+									"DimProductTable": {}
+								}
+							},
+							"staging": {
+								"linkedService": {
+									"referenceName": "synapse9nlosdj-WorkspaceDefaultStorage",
+									"type": "LinkedServiceReference"
+								},
+								"folderPath": "files/pipelines/stage_products"
+							},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/dataflows/10_LoadProductsData')]",
+				"[concat(variables('workspaceId'), '/linkedServices/synapse9nlosdj-WorkspaceDefaultStorage')]",
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/DimProduct')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "Data_Warehouse",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlDWTable",
+				"schema": [
+					{
+						"name": "ProductKey",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "ProductAltKey",
+						"type": "nvarchar"
+					},
+					{
+						"name": "ProductName",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Color",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Size",
+						"type": "nvarchar"
+					},
+					{
+						"name": "ListPrice",
+						"type": "money",
+						"precision": 19,
+						"scale": 4
+					},
+					{
+						"name": "Discontinued",
+						"type": "bit"
+					}
+				],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": "DimProduct_lab10"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/Data_Warehouse')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/Products_Csv')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "synapse9nlosdj-WorkspaceDefaultStorage",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "Product.csv",
+						"folderPath": "dp-203/Allfiles/labs/10/data",
+						"fileSystem": "files"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "ProductID",
+						"type": "String"
+					},
+					{
+						"name": "ProductName",
+						"type": "String"
+					},
+					{
+						"name": "Color",
+						"type": "String"
+					},
+					{
+						"name": "Size",
+						"type": "String"
+					},
+					{
+						"name": "ListPrice",
+						"type": "String"
+					},
+					{
+						"name": "Discontinued",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/synapse9nlosdj-WorkspaceDefaultStorage')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/Data_Warehouse')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"description": "Dedicated SQL pool",
+				"annotations": [],
+				"type": "AzureSqlDW",
+				"typeProperties": {
+					"connectionString": "[parameters('Data_Warehouse_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
 		{
 			"name": "[concat(parameters('workspaceName'), '/synapse9nlosdj-WorkspaceDefaultSqlServer')]",
 			"type": "Microsoft.Synapse/workspaces/linkedServices",
@@ -82,6 +269,122 @@
 				}
 			},
 			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/10_LoadProductsData')]",
+			"type": "Microsoft.Synapse/workspaces/dataflows",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "Products_Csv",
+								"type": "DatasetReference"
+							},
+							"name": "ProductsText",
+							"description": "Products text data"
+						},
+						{
+							"dataset": {
+								"referenceName": "DimProduct",
+								"type": "DatasetReference"
+							},
+							"name": "ProductTable",
+							"description": "Product table"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "DimProduct",
+								"type": "DatasetReference"
+							},
+							"name": "DimProductTable",
+							"description": "DimProductTable"
+						}
+					],
+					"transformations": [
+						{
+							"name": "MatchedProducts",
+							"description": "Matched product data"
+						},
+						{
+							"name": "SetLoadAction",
+							"description": " Insert new, upsert existing"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          ProductID as string,",
+						"          ProductName as string,",
+						"          Color as string,",
+						"          Size as string,",
+						"          ListPrice as decimal(10,0),",
+						"          Discontinued as boolean",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> ProductsText",
+						"source(output(",
+						"          ProductKey as integer,",
+						"          ProductAltKey as string,",
+						"          ProductName as string,",
+						"          Color as string,",
+						"          Size as string,",
+						"          ListPrice as decimal(19,4),",
+						"          Discontinued as boolean",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     isolationLevel: 'READ_UNCOMMITTED',",
+						"     format: 'table',",
+						"     staged: true) ~> ProductTable",
+						"ProductsText, ProductTable lookup(ProductID == ProductAltKey,",
+						"     multiple: false,",
+						"     pickup: 'last',",
+						"     asc(ProductKey, true),",
+						"     broadcast: 'auto')~> MatchedProducts",
+						"MatchedProducts alterRow(insertIf(isNull(ProductKey)),",
+						"     upsertIf(not(isNull(ProductKey)))) ~> SetLoadAction",
+						"SetLoadAction sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          ProductKey as integer,",
+						"          ProductAltKey as string,",
+						"          ProductName as string,",
+						"          Color as string,",
+						"          Size as string,",
+						"          ListPrice as decimal(19,4),",
+						"          Discontinued as boolean",
+						"     ),",
+						"     deletable:false,",
+						"     insertable:true,",
+						"     updateable:false,",
+						"     upsertable:true,",
+						"     keys:['ProductAltKey'],",
+						"     format: 'table',",
+						"     staged: true,",
+						"     allowCopyCommand: true,",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     errorHandlingOption: 'stopOnFirstError',",
+						"     mapColumn(",
+						"          ProductAltKey = ProductID,",
+						"          ProductName = ProductsText@ProductName,",
+						"          Color = ProductsText@Color,",
+						"          Size = ProductsText@Size,",
+						"          ListPrice = ProductsText@ListPrice,",
+						"          Discontinued = ProductsText@Discontinued",
+						"     )) ~> DimProductTable"
+					]
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/datasets/Products_Csv')]",
+				"[concat(variables('workspaceId'), '/datasets/DimProduct')]"
+			]
 		},
 		{
 			"name": "[concat(parameters('workspaceName'), '/WorkspaceSystemIdentity')]",
@@ -232,6 +535,29 @@
 			"dependsOn": []
 		},
 		{
+			"name": "[concat(parameters('workspaceName'), '/08 delta lake with serverless sql pool')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "serverless sql pool"
+				},
+				"content": {
+					"query": "-- read delta files\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'https://datalake9nlosdj.dfs.core.windows.net/files/delta_lake/sink_demo_sink/',\n        FORMAT = 'DELTA'\n    ) AS [result]\n\n-- using lake database tables\nCREATE DATABASE DeltaDB\n      COLLATE Latin1_General_100_BIN2_UTF8;\nGO;\n\nUSE DeltaDB;\nGO\n-- DROP EXTERNAL DATA SOURCE DeltaLakeStore\nCREATE EXTERNAL DATA SOURCE DeltaLakeStore\nWITH\n(\n    LOCATION = 'https://datalake9nlosdj.dfs.core.windows.net/files/delta_lake'\n);\nGO\n\nSELECT TOP 10 *\nFROM OPENROWSET(\n        BULK '/sink_demo_sink',\n        DATA_SOURCE = 'DeltaLakeStore',\n        FORMAT = 'DELTA'\n    ) as deltadata;\n    \n\n-- Accessing Spark meta store\n-- By default, Spark catalog tables are created in a database named \"default\"\n-- If you created another database using Spark SQL, you can use it here\nUSE default;\nGO \nSELECT * FROM tbl_orders;\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "default",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('workspaceName'), '/07 spark pool trasform data')]",
 			"type": "Microsoft.Synapse/workspaces/notebooks",
 			"apiVersion": "2019-06-01-preview",
@@ -252,7 +578,7 @@
 						"spark.dynamicAllocation.enabled": "false",
 						"spark.dynamicAllocation.minExecutors": "2",
 						"spark.dynamicAllocation.maxExecutors": "2",
-						"spark.autotune.trackingId": "93f2532f-4136-4489-8d42-7e6740f886a0"
+						"spark.autotune.trackingId": "c9d29c33-1c05-4938-9149-c7681389a7fd"
 					}
 				},
 				"metadata": {
@@ -311,7 +637,7 @@
 							"display(order_details.limit(5))"
 						],
 						"outputs": [],
-						"execution_count": 2
+						"execution_count": 1
 					},
 					{
 						"cell_type": "code",
@@ -505,7 +831,7 @@
 							"display(transformed_df.limit(5))"
 						],
 						"outputs": [],
-						"execution_count": 39
+						"execution_count": 2
 					},
 					{
 						"cell_type": "code",
@@ -567,7 +893,7 @@
 							"rel_path = 'abfss://files@datalake9nlosdj.dfs.core.windows.net/spark_data'"
 						],
 						"outputs": [],
-						"execution_count": 40
+						"execution_count": 8
 					},
 					{
 						"cell_type": "code",
@@ -750,7 +1076,34 @@
 							}
 						},
 						"source": [
-							"### External Tables"
+							"### Categlog Tables"
+						]
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"#### From Dataframe"
+						]
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"##### External Tables\r\n",
+							"Specify a path"
 						]
 					},
 					{
@@ -767,6 +1120,7 @@
 							}
 						},
 						"source": [
+							"# EXTERNAL TABLE\r\n",
 							"# from dataframe as parquet\r\n",
 							"transformed_df.write.saveAsTable('tblx_orders',mode='overwrite', format='parquet', path=rel_path+'/external_tables/tblx_orders')"
 						],
@@ -838,6 +1192,38 @@
 						"execution_count": 68
 					},
 					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"##### Managed (Internal) Tables"
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"transformed_df.write.saveAsTable('tbl_orders',mode='overwrite', format='parquet')"
+						],
+						"outputs": [],
+						"execution_count": 5
+					},
+					{
 						"cell_type": "code",
 						"metadata": {
 							"jupyter": {
@@ -856,7 +1242,7 @@
 							"display(spark.catalog.listDatabases())"
 						],
 						"outputs": [],
-						"execution_count": 72
+						"execution_count": 3
 					},
 					{
 						"cell_type": "code",
@@ -877,7 +1263,7 @@
 							"display(spark.catalog.listTables())"
 						],
 						"outputs": [],
-						"execution_count": 71
+						"execution_count": 10
 					},
 					{
 						"cell_type": "code",
@@ -949,6 +1335,67 @@
 						],
 						"outputs": [],
 						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"microsoft": {
+								"language": "sparksql"
+							},
+							"collapsed": false
+						},
+						"source": [
+							"%%sql\r\n",
+							"\r\n",
+							"-- Catelog table - EXTERNAL\r\n",
+							"CREATE TABLE tbl_orders_sql\r\n",
+							"USING PARQUET\r\n",
+							"LOCATION 'abfss://files@datalake9nlosdj.dfs.core.windows.net/spark_data/transformed_data/orders.parquet'"
+						],
+						"outputs": [],
+						"execution_count": 9
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"microsoft": {
+								"language": "sparksql"
+							}
+						},
+						"source": [
+							"%%sql\r\n",
+							"-- Catelog table - Managed or External with empty folder\r\n",
+							"%%sql\r\n",
+							"\r\n",
+							"CREATE TABLE Tbl_ManagedSalesOrders\r\n",
+							"(\r\n",
+							"    Orderid INT NOT NULL,\r\n",
+							"    OrderDate TIMESTAMP NOT NULL,\r\n",
+							"    CustomerName STRING,\r\n",
+							"    SalesTotal FLOAT NOT NULL\r\n",
+							")\r\n",
+							"USING PARQUET"
+						],
+						"outputs": [],
+						"execution_count": null
 					}
 				]
 			},
@@ -975,7 +1422,7 @@
 						"spark.dynamicAllocation.enabled": "false",
 						"spark.dynamicAllocation.minExecutors": "2",
 						"spark.dynamicAllocation.maxExecutors": "2",
-						"spark.autotune.trackingId": "1bfd5715-b3c9-4a37-96e9-32b9b7e13206"
+						"spark.autotune.trackingId": "22e4b4e7-5e32-43ed-947c-67f33b21f4a7"
 					}
 				},
 				"metadata": {
@@ -1000,15 +1447,13 @@
 						"sparkVersion": "3.4",
 						"nodeCount": 3,
 						"cores": 4,
-						"memory": 28,
-						"automaticScaleJobs": false
+						"memory": 28
 					},
 					"sessionKeepAliveTimeout": 30
 				},
 				"cells": [
 					{
 						"cell_type": "code",
-						"metadata": {},
 						"source": [
 							"root_folder = 'abfss://files@datalake9nlosdj.dfs.core.windows.net'"
 						],
@@ -1036,7 +1481,7 @@
 							"display(df.limit(10))"
 						],
 						"outputs": [],
-						"execution_count": 34
+						"execution_count": 3
 					},
 					{
 						"cell_type": "code",
@@ -1055,7 +1500,7 @@
 							"df.printSchema()"
 						],
 						"outputs": [],
-						"execution_count": 4
+						"execution_count": 13
 					},
 					{
 						"cell_type": "code",
@@ -1074,7 +1519,7 @@
 							"delta_table_path = root_folder+'/delta_lake/products'"
 						],
 						"outputs": [],
-						"execution_count": 6
+						"execution_count": 4
 					},
 					{
 						"cell_type": "markdown",
@@ -1171,7 +1616,7 @@
 							""
 						],
 						"outputs": [],
-						"execution_count": 40
+						"execution_count": 11
 					},
 					{
 						"cell_type": "markdown",
@@ -1325,6 +1770,26 @@
 						"execution_count": 52
 					},
 					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# history of changes\r\n",
+							"deltaTable.history(10).show(20, False, True)"
+						],
+						"outputs": [],
+						"execution_count": 64
+					},
+					{
 						"cell_type": "markdown",
 						"metadata": {
 							"nteract": {
@@ -1334,7 +1799,62 @@
 							}
 						},
 						"source": [
-							"## Querying"
+							"## Querying versions"
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"df = spark.read.format(\"delta\").option(\"versionAsOf\", 3).load(delta_table_path)\r\n",
+							"display(df.orderBy('ProductID').limit(10))"
+						],
+						"outputs": [],
+						"execution_count": 56
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"df = spark.read.format(\"delta\").option(\"timestampAsOf\", '2024-12-28 09:20:35').load(delta_table_path)\r\n",
+							"display(df.orderBy('ProductID').limit(10))"
+						],
+						"outputs": [],
+						"execution_count": 60
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"## Creating catelog tables"
 						]
 					},
 					{
@@ -1351,10 +1871,432 @@
 							}
 						},
 						"source": [
+							"from delta.tables import DeltaTable\r\n",
+							"\r\n",
+							"DeltaTable.create(spark) \\\r\n",
+							"  .tableName(\"default.ManagedProducts\") \\\r\n",
+							"  .addColumn(\"Productid\", \"INT\") \\\r\n",
+							"  .addColumn(\"ProductName\", \"STRING\") \\\r\n",
+							"  .addColumn(\"Category\", \"STRING\") \\\r\n",
+							"  .addColumn(\"Price\", \"FLOAT\") \\\r\n",
+							"  .execute()"
+						],
+						"outputs": [],
+						"execution_count": 6
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"## Streaming dataset"
+						]
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"#### As source"
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"delta_table_path_stream_source = root_folder+'/delta_lake/products_stream_source'\r\n",
+							"delta_table_path_stream_sink = root_folder+'/delta_lake/products_stream_sink'\r\n",
+							"delta_table_path_stream_sink_cp = root_folder+'/delta_lake/products_stream_sink_checkpoint'\r\n",
+							"\r\n",
 							""
 						],
 						"outputs": [],
+						"execution_count": 29
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# --------- preapring delta folder with empty folder\r\n",
+							"# Define the schema \r\n",
+							"from pyspark.sql.types import *\r\n",
+							"schema = StructType([ \r\n",
+							"    StructField(\"ProductID\", StringType(), True), \r\n",
+							"    StructField(\"ProductName\", StringType(), True), \r\n",
+							"    StructField(\"Category\", StringType(), True), \r\n",
+							"    StructField(\"ListPrice\", StringType(), True)\r\n",
+							"])\r\n",
+							"# Create an empty DataFrame with the schema \r\n",
+							"empty_df = spark.createDataFrame([], schema) \r\n",
+							"# Write the empty DataFrame to the Delta table location \r\n",
+							"empty_df.write.format(\"delta\").save(delta_table_path_stream_source)"
+						],
+						"outputs": [],
+						"execution_count": 17
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# Load a streaming dataframe from the Delta Table\r\n",
+							"stream_df = spark.readStream.format(\"delta\") \\\r\n",
+							"    .option(\"ignoreChanges\", \"true\") \\\r\n",
+							"    .load(delta_table_path_stream_source)"
+						],
+						"outputs": [],
+						"execution_count": 21
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# Now you can process the streaming data in the dataframe\r\n",
+							"# for example, write to data lake\r\n",
+							"q = stream_df.writeStream \\\r\n",
+							"    .outputMode(\"append\") \\\r\n",
+							"    .format(\"delta\").option(\"checkpointLocation\", delta_table_path_stream_sink_cp) \\\r\n",
+							"    .start(delta_table_path_stream_sink)"
+						],
+						"outputs": [],
+						"execution_count": 30
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# updating source to trigger sinking\r\n",
+							"# read new data with the schema \r\n",
+							"prod_id = 503\r\n",
+							"df_new = spark.read.load(path=root_folder+'/dp-203/Allfiles/labs/07/data_append/new_product_{}.csv'.format(prod_id), format='csv', schema=schema)\r\n",
+							"# Write the new DataFrame to the Delta table location \r\n",
+							"df_new.write.format(\"delta\").save(delta_table_path_stream_source, mode='append')"
+						],
+						"outputs": [],
+						"execution_count": 39
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"# for monitor\r\n",
+							"from delta.tables import DeltaTable\r\n",
+							"\r\n",
+							"deltaTable_source = DeltaTable.forPath(spark, delta_table_path_stream_source)\r\n",
+							"deltaTable_sink = DeltaTable.forPath(spark, delta_table_path_stream_sink)"
+						],
+						"outputs": [],
+						"execution_count": 32
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"# monitor here\r\n",
+							"display(deltaTable_source.toDF().limit(10))\r\n",
+							"display(deltaTable_sink.toDF().limit(10))"
+						],
+						"outputs": [],
+						"execution_count": 40
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# stop\r\n",
+							"q.stop()"
+						],
+						"outputs": [],
+						"execution_count": 38
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"#### As sink"
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"source_files_path = root_folder+'/dp-203/Allfiles/labs/07/json_file_drop'\r\n",
+							"delta_table_path_stream_sink = root_folder+'/delta_lake/sink_demo_sink'\r\n",
+							"delta_table_path_stream_sink_cp = root_folder+'/delta_lake/sink_demo_checkpoint'"
+						],
+						"outputs": [],
+						"execution_count": 75
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"from pyspark.sql.types import *\r\n",
+							"from pyspark.sql.functions import *\r\n",
+							"\r\n",
+							"# Create a stream that reads JSON data from a folder\r\n",
+							"jsonSchema = StructType([\r\n",
+							"    StructField(\"device\", StringType(), False),\r\n",
+							"    StructField(\"status\", StringType(), False)\r\n",
+							"])\r\n",
+							"stream_df = spark.readStream.schema(jsonSchema).option(\"maxFilesPerTrigger\", 1).json(source_files_path)"
+						],
+						"outputs": [],
+						"execution_count": 82
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# Write the stream to a delta table\r\n",
+							"delta_stream = stream_df.writeStream.format(\"delta\").option(\"checkpointLocation\", delta_table_path_stream_sink_cp).start(delta_table_path_stream_sink)"
+						],
+						"outputs": [],
+						"execution_count": 83
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"microsoft": {
+								"language": "sparksql"
+							},
+							"collapsed": false
+						},
+						"source": [
+							"%%sql\r\n",
+							"\r\n",
+							"CREATE TABLE sink_demo\r\n",
+							"USING DELTA \r\n",
+							"LOCATION 'abfss://files@datalake9nlosdj.dfs.core.windows.net/delta_lake/sink_demo_sink'"
+						],
+						"outputs": [],
+						"execution_count": 46
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"microsoft": {
+								"language": "sparksql"
+							},
+							"collapsed": false
+						},
+						"source": [
+							"%%sql \r\n",
+							"SELECT device, status\r\n",
+							"FROM sink_demo;"
+						],
+						"outputs": [],
+						"execution_count": 89
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# source files\r\n",
+							"df_json = spark.read.json(source_files_path, schema=jsonSchema)\r\n",
+							"display(df_json)"
+						],
+						"outputs": [],
 						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"delta_stream.stop()"
+						],
+						"outputs": [],
+						"execution_count": 87
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"microsoft": {
+								"language": "sparksql"
+							},
+							"collapsed": false
+						},
+						"source": [
+							"%%sql\r\n",
+							"\r\n",
+							"DROP TABLE sink_demo"
+						],
+						"outputs": [],
+						"execution_count": 92
 					}
 				]
 			},
@@ -1895,6 +2837,18 @@
 			"dependsOn": []
 		},
 		{
+			"name": "[concat(parameters('workspaceName'), '/sql9nlosdj')]",
+			"type": "Microsoft.Synapse/workspaces/sqlPools",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"collation": "SQL_Latin1_General_CP1_CI_AS",
+				"maxSizeBytes": 263882790666240,
+				"annotations": []
+			},
+			"dependsOn": [],
+			"location": "southeastasia"
+		},
+		{
 			"name": "[concat(parameters('workspaceName'), '/spark9nlosdj')]",
 			"type": "Microsoft.Synapse/workspaces/bigDataPools",
 			"apiVersion": "2019-06-01-preview",
@@ -1914,18 +2868,6 @@
 				"sparkVersion": "3.4",
 				"isComputeIsolationEnabled": false,
 				"sessionLevelPackagesEnabled": false,
-				"annotations": []
-			},
-			"dependsOn": [],
-			"location": "southeastasia"
-		},
-		{
-			"name": "[concat(parameters('workspaceName'), '/sql9nlosdj')]",
-			"type": "Microsoft.Synapse/workspaces/sqlPools",
-			"apiVersion": "2019-06-01-preview",
-			"properties": {
-				"collation": "SQL_Latin1_General_CP1_CI_AS",
-				"maxSizeBytes": 263882790666240,
 				"annotations": []
 			},
 			"dependsOn": [],
