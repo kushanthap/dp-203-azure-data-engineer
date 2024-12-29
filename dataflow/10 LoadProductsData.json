@@ -1,5 +1,5 @@
 {
-	"name": "10_LoadProductsData",
+	"name": "10 LoadProductsData",
 	"properties": {
 		"type": "MappingDataFlow",
 		"typeProperties": {
