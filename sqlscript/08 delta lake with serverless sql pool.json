@@ -1,6 +1,9 @@
 {
 	"name": "08 delta lake with serverless sql pool",
 	"properties": {
+		"folder": {
+			"name": "serverless sql pool"
+		},
 		"content": {
 			"query": "-- read delta files\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'https://datalake9nlosdj.dfs.core.windows.net/files/delta_lake/sink_demo_sink/',\n        FORMAT = 'DELTA'\n    ) AS [result]\n\n-- using lake database tables\nCREATE DATABASE DeltaDB\n      COLLATE Latin1_General_100_BIN2_UTF8;\nGO;\n\nUSE DeltaDB;\nGO\n-- DROP EXTERNAL DATA SOURCE DeltaLakeStore\nCREATE EXTERNAL DATA SOURCE DeltaLakeStore\nWITH\n(\n    LOCATION = 'https://datalake9nlosdj.dfs.core.windows.net/files/delta_lake'\n);\nGO\n\nSELECT TOP 10 *\nFROM OPENROWSET(\n        BULK '/sink_demo_sink',\n        DATA_SOURCE = 'DeltaLakeStore',\n        FORMAT = 'DELTA'\n    ) as deltadata;\n    \n\n-- Accessing Spark meta store\n-- By default, Spark catalog tables are created in a database named \"default\"\n-- If you created another database using Spark SQL, you can use it here\nUSE default;\nGO \nSELECT * FROM tbl_orders;\n",
 			"metadata": {
