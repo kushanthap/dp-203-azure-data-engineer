@@ -130,7 +130,14 @@
 					{
 						"name": "Transform Data",
 						"type": "SqlServerStoredProcedure",
-						"dependsOn": [],
+						"dependsOn": [
+							{
+								"activity": "Delete Existing Folder",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
 						"policy": {
 							"timeout": "0.12:00:00",
 							"retry": 0,
@@ -146,6 +153,32 @@
 							"referenceName": "ServerlessSQLServer_SalesDB",
 							"type": "LinkedServiceReference"
 						}
+					},
+					{
+						"name": "Delete Existing Folder",
+						"type": "Delete",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "YearlySalesData_Pipeline",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"enableLogging": false,
+							"storeSettings": {
+								"type": "AzureBlobFSReadSettings",
+								"recursive": true,
+								"enablePartitionDiscovery": false
+							}
+						}
 					}
 				],
 				"policy": {
@@ -154,7 +187,8 @@
 				"annotations": []
 			},
 			"dependsOn": [
-				"[concat(variables('workspaceId'), '/linkedServices/ServerlessSQLServer_SalesDB')]"
+				"[concat(variables('workspaceId'), '/linkedServices/ServerlessSQLServer_SalesDB')]",
+				"[concat(variables('workspaceId'), '/datasets/YearlySalesData_Pipeline')]"
 			]
 		},
 		{
@@ -389,6 +423,29 @@
 			},
 			"dependsOn": [
 				"[concat(variables('workspaceId'), '/linkedServices/Products')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/YearlySalesData_Pipeline')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "synapse9nlosdj-WorkspaceDefaultStorage",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "Binary",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": "external_table_data/yearlysales_pipeline",
+						"fileSystem": "files"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/synapse9nlosdj-WorkspaceDefaultStorage')]"
 			]
 		},
 		{
