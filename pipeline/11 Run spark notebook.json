@@ -1,0 +1,40 @@
+{
+	"name": "11 Run spark notebook",
+	"properties": {
+		"activities": [
+			{
+				"name": "Spark Transform",
+				"type": "SynapseNotebook",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"notebook": {
+						"referenceName": "11 Spark Transform for Pipeline",
+						"type": "NotebookReference"
+					},
+					"parameters": {
+						"folderName": {
+							"value": "@pipeline().RunId",
+							"type": "string"
+						}
+					},
+					"snapshot": true,
+					"sparkPool": {
+						"referenceName": "spark9nlosdj",
+						"type": "BigDataPoolReference"
+					},
+					"executorSize": "Small",
+					"driverSize": "Small"
+				}
+			}
+		],
+		"annotations": []
+	}
+}
