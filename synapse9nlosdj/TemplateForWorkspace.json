@@ -192,7 +192,7 @@
 			]
 		},
 		{
-			"name": "[concat(parameters('workspaceName'), '/10 Load Product Data')]",
+			"name": "[concat(parameters('workspaceName'), '/10 Using data flows')]",
 			"type": "Microsoft.Synapse/workspaces/pipelines",
 			"apiVersion": "2019-06-01-preview",
 			"properties": {
@@ -243,6 +243,64 @@
 			"dependsOn": [
 				"[concat(variables('workspaceId'), '/dataflows/10 LoadProductsData')]",
 				"[concat(variables('workspaceId'), '/linkedServices/synapse9nlosdj-WorkspaceDefaultStorage')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/11 Run spark notebook')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "Spark Transform",
+						"type": "SynapseNotebook",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"notebook": {
+								"referenceName": "11 Spark Transform for Pipeline",
+								"type": "NotebookReference"
+							},
+							"parameters": {
+								"folderName": {
+									"value": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									},
+									"type": "string"
+								}
+							},
+							"snapshot": true,
+							"sparkPool": {
+								"referenceName": "spark9nlosdj",
+								"type": "BigDataPoolReference"
+							},
+							"executorSize": "Small",
+							"conf": {
+								"spark.dynamicAllocation.enabled": null,
+								"spark.dynamicAllocation.minExecutors": null,
+								"spark.dynamicAllocation.maxExecutors": null
+							},
+							"driverSize": "Small",
+							"numExecutors": null
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/notebooks/11 Spark Transform for Pipeline')]",
+				"[concat(variables('workspaceId'), '/bigDataPools/spark9nlosdj')]"
 			]
 		},
 		{
@@ -2628,7 +2686,7 @@
 						"spark.dynamicAllocation.enabled": "false",
 						"spark.dynamicAllocation.minExecutors": "2",
 						"spark.dynamicAllocation.maxExecutors": "2",
-						"spark.autotune.trackingId": "1d58e592-d120-4241-828f-4bff4a5035ca"
+						"spark.autotune.trackingId": "c8807c2f-f29b-48f2-9744-e68369c393ea"
 					}
 				},
 				"metadata": {
@@ -2653,15 +2711,13 @@
 						"sparkVersion": "3.4",
 						"nodeCount": 3,
 						"cores": 4,
-						"memory": 28,
-						"automaticScaleJobs": false
+						"memory": 28
 					},
 					"sessionKeepAliveTimeout": 30
 				},
 				"cells": [
 					{
 						"cell_type": "markdown",
-						"metadata": {},
 						"source": [
 							"# Transform data by using Spark\n",
 							"\n",
