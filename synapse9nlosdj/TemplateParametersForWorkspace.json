@@ -11,6 +11,9 @@
 		"synapse9nlosdj-WorkspaceDefaultSqlServer_connectionString": {
 			"value": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=tcp:synapse9nlosdj.sql.azuresynapse.net,1433;Initial Catalog=@{linkedService().DBName}"
 		},
+		"Products_properties_typeProperties_url": {
+			"value": "https://raw.githubusercontent.com/MicrosoftLearning/dp-203-azure-data-engineer/master/Allfiles/labs/01/adventureworks/products.csv"
+		},
 		"synapse9nlosdj-WorkspaceDefaultStorage_properties_typeProperties_url": {
 			"value": "https://datalake9nlosdj.dfs.core.windows.net"
 		}
