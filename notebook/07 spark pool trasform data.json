@@ -17,7 +17,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "2",
 				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "c9d29c33-1c05-4938-9149-c7681389a7fd"
+				"spark.autotune.trackingId": "9019abcd-298e-44fe-89bf-744f964e8576"
 			}
 		},
 		"metadata": {
@@ -810,6 +810,34 @@
 					"USING PARQUET"
 				],
 				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"microsoft": {
+						"language": "sparksql"
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%sql \r\n",
+					"\r\n",
+					"-- Querying data in other Lakehouse DBs\r\n",
+					"\r\n",
+					"USE RetailDB;\r\n",
+					"\r\n",
+					"SELECT * from Product;"
+				],
+				"execution_count": 7
 			}
 		]
 	}
