@@ -5,6 +5,9 @@
 		"workspaceName": {
 			"value": "synapse9nlosdj"
 		},
+		"AdventureWorks_connectionString": {
+			"value": ""
+		},
 		"Data_Warehouse_connectionString": {
 			"value": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=synapse9nlosdj.sql.azuresynapse.net;Initial Catalog=sql9nlosdj"
 		},
