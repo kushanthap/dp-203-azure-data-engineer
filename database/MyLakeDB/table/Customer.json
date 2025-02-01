@@ -88,23 +88,23 @@
 				"FormatType": "csv",
 				"SerializeLib": "org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe",
 				"Properties": {
-					"path": "abfss://files@datalake5ox7t4s.dfs.core.windows.net/labs/MyLakeDB/Customer",
+					"path": "abfss://files@datalake5ox7t4s.dfs.core.windows.net/labs/04/customer.csv",
 					"delimiter": ",",
 					"multiLine": "false",
 					"firstRowAsHeader": "false",
 					"serialization.format": "1",
 					"escape": "\\",
 					"quote": "\"",
-					"FormatTypeSetToDatabaseDefault": true,
+					"FormatTypeSetToDatabaseDefault": false,
 					"header": "false"
 				}
 			},
 			"Source": {
 				"Provider": "ADLS",
-				"Location": "abfss://files@datalake5ox7t4s.dfs.core.windows.net/labs/MyLakeDB/Customer",
+				"Location": "abfss://files@datalake5ox7t4s.dfs.core.windows.net/labs/04/customer.csv",
 				"Properties": {
 					"LinkedServiceName": "synapse5ox7t4s-WorkspaceDefaultStorage",
-					"LocationSetToDatabaseDefault": true
+					"LocationSetToDatabaseDefault": false
 				}
 			},
 			"Properties": {

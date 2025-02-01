@@ -11,7 +11,7 @@
 		},
 		"Source": {
 			"Provider": "ADLS",
-			"Location": "abfss://files@datalake5ox7t4s.dfs.core.windows.net/labs/MyLakeDB",
+			"Location": "abfss://files@datalake5ox7t4s.dfs.core.windows.net/labs/04",
 			"Properties": {
 				"FormatType": "csv",
 				"LinkedServiceName": "synapse5ox7t4s-WorkspaceDefaultStorage"
