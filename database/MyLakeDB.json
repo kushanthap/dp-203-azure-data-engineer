@@ -1,0 +1,22 @@
+{
+	"name": "MyLakeDB",
+	"properties": {
+		"Name": "MyLakeDB",
+		"EntityType": "DATABASE",
+		"Origin": {
+			"Type": "SPARK"
+		},
+		"Properties": {
+			"IsSyMSCDMDatabase": true
+		},
+		"Source": {
+			"Provider": "ADLS",
+			"Location": "abfss://files@datalake5ox7t4s.dfs.core.windows.net/labs/MyLakeDB",
+			"Properties": {
+				"FormatType": "csv",
+				"LinkedServiceName": "synapse5ox7t4s-WorkspaceDefaultStorage"
+			}
+		}
+	},
+	"type": "DATABASE"
+}
