@@ -645,6 +645,26 @@
 			"dependsOn": []
 		},
 		{
+			"name": "[concat(parameters('workspaceName'), '/SQL script 2')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "SELECT TOP (100) [CustomerId]\n,[FirstName]\n,[LastName]\n,[EmailAddress]\n,[Phone]\n FROM [MyLakeDB].[dbo].[Customers]",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "MyLakeDB",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('workspaceName'), '/07 spark pool trasform data')]",
 			"type": "Microsoft.Synapse/workspaces/notebooks",
 			"apiVersion": "2019-06-01-preview",
@@ -2936,43 +2956,6 @@
 			"dependsOn": []
 		},
 		{
-			"name": "[concat(parameters('workspaceName'), '/spark5ox7t4s')]",
-			"type": "Microsoft.Synapse/workspaces/bigDataPools",
-			"apiVersion": "2019-06-01-preview",
-			"properties": {
-				"autoPause": {
-					"enabled": true,
-					"delayInMinutes": 15
-				},
-				"autoScale": {
-					"enabled": true,
-					"maxNodeCount": 4,
-					"minNodeCount": 3
-				},
-				"nodeCount": 0,
-				"nodeSize": "Small",
-				"nodeSizeFamily": "MemoryOptimized",
-				"sparkVersion": "3.4",
-				"isComputeIsolationEnabled": false,
-				"sessionLevelPackagesEnabled": false,
-				"annotations": []
-			},
-			"dependsOn": [],
-			"location": "australiaeast"
-		},
-		{
-			"name": "[concat(parameters('workspaceName'), '/sql5ox7t4s')]",
-			"type": "Microsoft.Synapse/workspaces/sqlPools",
-			"apiVersion": "2019-06-01-preview",
-			"properties": {
-				"collation": "SQL_Latin1_General_CP1_CI_AS",
-				"maxSizeBytes": 263882790666240,
-				"annotations": []
-			},
-			"dependsOn": [],
-			"location": "australiaeast"
-		},
-		{
 			"name": "[concat(parameters('workspaceName'), '/MyLakeDB')]",
 			"type": "Microsoft.Synapse/workspaces/databases",
 			"apiVersion": "2019-06-01-preview",
@@ -3023,8 +3006,8 @@
 										"Name": "CustomerId",
 										"OriginDataTypeName": {
 											"TypeName": "long",
-											"IsNullable": false,
 											"IsComplexType": false,
+											"IsNullable": false,
 											"Properties": {
 												"HIVE_TYPE_STRING": "long"
 											}
@@ -3036,8 +3019,8 @@
 										"Description": "",
 										"OriginDataTypeName": {
 											"TypeName": "string",
-											"IsNullable": false,
 											"IsComplexType": false,
+											"IsNullable": false,
 											"Length": 256,
 											"Properties": {
 												"HIVE_TYPE_STRING": "string"
@@ -3050,8 +3033,8 @@
 										"Description": "",
 										"OriginDataTypeName": {
 											"TypeName": "string",
-											"IsNullable": true,
 											"IsComplexType": false,
+											"IsNullable": true,
 											"Length": 256,
 											"Properties": {
 												"HIVE_TYPE_STRING": "string"
@@ -3064,8 +3047,8 @@
 										"Description": "",
 										"OriginDataTypeName": {
 											"TypeName": "string",
-											"IsNullable": false,
 											"IsComplexType": false,
+											"IsNullable": false,
 											"Length": 256,
 											"Properties": {
 												"HIVE_TYPE_STRING": "string"
@@ -3078,8 +3061,8 @@
 										"Description": "",
 										"OriginDataTypeName": {
 											"TypeName": "string",
-											"IsNullable": true,
 											"IsComplexType": false,
+											"IsNullable": true,
 											"Length": 256,
 											"Properties": {
 												"HIVE_TYPE_STRING": "string"
@@ -3094,7 +3077,7 @@
 									"FormatType": "csv",
 									"SerializeLib": "org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe",
 									"Properties": {
-										"path": "abfss://files@datalake5ox7t4s.dfs.core.windows.net/labs/labs/04/Cus",
+										"path": "abfss://files@datalake5ox7t4s.dfs.core.windows.net/labs/04/Cus",
 										"delimiter": ",",
 										"multiLine": "false",
 										"firstRowAsHeader": "false",
@@ -3107,7 +3090,7 @@
 								},
 								"Source": {
 									"Provider": "ADLS",
-									"Location": "abfss://files@datalake5ox7t4s.dfs.core.windows.net/labs/labs/04/Cus",
+									"Location": "abfss://files@datalake5ox7t4s.dfs.core.windows.net/labs/04/Cus",
 									"Properties": {
 										"LinkedServiceName": "synapse5ox7t4s-WorkspaceDefaultStorage",
 										"LocationSetToDatabaseDefault": false
@@ -3125,13 +3108,11 @@
 								"Description": "",
 								"DisplayFolderInfo": "{\"name\":\"Others\",\"colorCode\":\"\"}",
 								"PrimaryKeys": "CustomerId",
-								"spark.sql.sources.provider": "csv",
-								"sql:IsAppendOnly": false
+								"spark.sql.sources.provider": "csv"
 							},
 							"Retention": 0,
 							"Temporary": false,
-							"IsRewriteEnabled": false,
-							"Partitioning": {}
+							"IsRewriteEnabled": false
 						},
 						"Source": {
 							"Type": "SPARK"
@@ -3140,6 +3121,43 @@
 				]
 			},
 			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/spark5ox7t4s')]",
+			"type": "Microsoft.Synapse/workspaces/bigDataPools",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"autoPause": {
+					"enabled": true,
+					"delayInMinutes": 15
+				},
+				"autoScale": {
+					"enabled": true,
+					"maxNodeCount": 4,
+					"minNodeCount": 3
+				},
+				"nodeCount": 0,
+				"nodeSize": "Small",
+				"nodeSizeFamily": "MemoryOptimized",
+				"sparkVersion": "3.4",
+				"isComputeIsolationEnabled": false,
+				"sessionLevelPackagesEnabled": false,
+				"annotations": []
+			},
+			"dependsOn": [],
+			"location": "australiaeast"
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/sql5ox7t4s')]",
+			"type": "Microsoft.Synapse/workspaces/sqlPools",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"collation": "SQL_Latin1_General_CP1_CI_AS",
+				"maxSizeBytes": 263882790666240,
+				"annotations": []
+			},
+			"dependsOn": [],
+			"location": "australiaeast"
 		}
 	]
 }
