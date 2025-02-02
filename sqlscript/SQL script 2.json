@@ -2,7 +2,7 @@
 	"name": "SQL script 2",
 	"properties": {
 		"content": {
-			"query": "SELECT TOP (100) [CustomerId]\n,[FirstName]\n,[LastName]\n,[EmailAddress]\n,[Phone]\n FROM [MyLakeDB].[dbo].[Customers]",
+			"query": "SELECT TOP (100) [CustomerId]\n,[FirstName]\n,[LastName]\n,[EmailAddress]\n,[Phone]\n FROM [MyLakeDB].[dbo].[Customers]\n\n SELECT TOP (100) *\n FROM [MyLakeDB].[dbo].[Orders]",
 			"metadata": {
 				"language": "sql"
 			},
