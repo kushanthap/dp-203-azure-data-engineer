@@ -5,10 +5,6 @@
 		"typeProperties": {
 			"sources": [
 				{
-					"dataset": {
-						"referenceName": "Products_Csv",
-						"type": "DatasetReference"
-					},
 					"name": "ProductsText",
 					"description": "Products text data"
 				},
@@ -51,8 +47,7 @@
 				"          Discontinued as boolean",
 				"     ),",
 				"     allowSchemaDrift: true,",
-				"     validateSchema: false,",
-				"     ignoreNoFilesFound: false) ~> ProductsText",
+				"     validateSchema: false) ~> ProductsText",
 				"source(output(",
 				"          ProductKey as integer,",
 				"          ProductAltKey as string,",
