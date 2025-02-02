@@ -1,0 +1,2976 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"workspaceName": {
+			"type": "string",
+			"metadata": "Workspace name",
+			"defaultValue": "synapse5ox7t4s"
+		},
+		"Data_Warehouse_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'Data_Warehouse'",
+			"defaultValue": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=synapse9nlosdj.sql.azuresynapse.net;Initial Catalog=sql9nlosdj"
+		},
+		"SqlAdventureWorksLT_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'SqlAdventureWorksLT'"
+		},
+		"synapse5ox7t4s-WorkspaceDefaultSqlServer_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'synapse5ox7t4s-WorkspaceDefaultSqlServer'",
+			"defaultValue": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=tcp:synapse5ox7t4s.sql.azuresynapse.net,1433;Initial Catalog=@{linkedService().DBName}"
+		},
+		"synapse9nlosdj-WorkspaceDefaultSqlServer_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'synapse9nlosdj-WorkspaceDefaultSqlServer'",
+			"defaultValue": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=tcp:synapse9nlosdj.sql.azuresynapse.net,1433;Initial Catalog=@{linkedService().DBName}"
+		},
+		"synapsedtg248c-WorkspaceDefaultSqlServer_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'synapsedtg248c-WorkspaceDefaultSqlServer'",
+			"defaultValue": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=tcp:synapsedtg248c.sql.azuresynapse.net,1433;Initial Catalog=@{linkedService().DBName}"
+		},
+		"Products_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://raw.githubusercontent.com/MicrosoftLearning/dp-203-azure-data-engineer/master/Allfiles/labs/01/adventureworks/products.csv"
+		},
+		"ServerlessSQLServer_SalesDB_properties_typeProperties_server": {
+			"type": "string",
+			"defaultValue": "synapse9nlosdj-ondemand.sql.azuresynapse.net"
+		},
+		"ServerlessSQLServer_SalesDB_properties_typeProperties_database": {
+			"type": "string",
+			"defaultValue": "Sales"
+		},
+		"synapse5ox7t4s-WorkspaceDefaultStorage_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://datalake5ox7t4s.dfs.core.windows.net"
+		}
+	},
+	"variables": {
+		"workspaceId": "[concat('Microsoft.Synapse/workspaces/', parameters('workspaceName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('workspaceName'), '/03 run sql pool stored procedure')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "Transform Data",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[dbo].[sp_GetYearlySales_pipeline]"
+						},
+						"linkedServiceName": {
+							"referenceName": "ServerlessSQLServer_SalesDB",
+							"type": "LinkedServiceReference"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/ServerlessSQLServer_SalesDB')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/11 Run spark notebook')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "Spark Transform",
+						"type": "SynapseNotebook",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"notebook": {
+								"referenceName": "11 Spark Transform for Pipeline",
+								"type": "NotebookReference"
+							},
+							"parameters": {
+								"folderName": {
+									"value": {
+										"value": "@pipeline().RunId",
+										"type": "Expression"
+									},
+									"type": "string"
+								}
+							},
+							"snapshot": true,
+							"executorSize": "Small",
+							"conf": {
+								"spark.dynamicAllocation.enabled": null,
+								"spark.dynamicAllocation.minExecutors": null,
+								"spark.dynamicAllocation.maxExecutors": null
+							},
+							"driverSize": "Small",
+							"numExecutors": null
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/notebooks/11 Spark Transform for Pipeline')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/DimProduct')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "Data_Warehouse",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "AzureSqlDWTable",
+				"schema": [
+					{
+						"name": "ProductKey",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "ProductAltKey",
+						"type": "nvarchar"
+					},
+					{
+						"name": "ProductName",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Color",
+						"type": "nvarchar"
+					},
+					{
+						"name": "Size",
+						"type": "nvarchar"
+					},
+					{
+						"name": "ListPrice",
+						"type": "money",
+						"precision": 19,
+						"scale": 4
+					},
+					{
+						"name": "Discontinued",
+						"type": "bit"
+					}
+				],
+				"typeProperties": {
+					"schema": "dbo",
+					"table": "DimProduct_lab10"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/Data_Warehouse')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SourceDataset_z7u')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "Products",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "HttpServerLocation"
+					},
+					"columnDelimiter": ",",
+					"rowDelimiter": "\n",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "ProductID",
+						"type": "String"
+					},
+					{
+						"name": "ProductName",
+						"type": "String"
+					},
+					{
+						"name": "Category",
+						"type": "String"
+					},
+					{
+						"name": "ListPrice",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/Products')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/Data_Warehouse')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"description": "Dedicated SQL pool",
+				"annotations": [],
+				"type": "AzureSqlDW",
+				"typeProperties": {
+					"connectionString": "[parameters('Data_Warehouse_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/Products')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"description": "Product list via HTTP",
+				"annotations": [],
+				"type": "HttpServer",
+				"typeProperties": {
+					"url": "[parameters('Products_properties_typeProperties_url')]",
+					"enableServerCertificateValidation": true,
+					"authenticationType": "Anonymous"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/ServerlessSQLServer_SalesDB')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureSqlDatabase",
+				"typeProperties": {
+					"server": "[parameters('ServerlessSQLServer_SalesDB_properties_typeProperties_server')]",
+					"database": "[parameters('ServerlessSQLServer_SalesDB_properties_typeProperties_database')]",
+					"encrypt": "mandatory",
+					"trustServerCertificate": false,
+					"authenticationType": "SystemAssignedManagedIdentity"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SqlAdventureWorksLT')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"description": "Connection to AdventureWorksLT database",
+				"annotations": [],
+				"type": "AzureSqlDatabase",
+				"typeProperties": {
+					"connectionString": "[parameters('SqlAdventureWorksLT_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/synapse5ox7t4s-WorkspaceDefaultSqlServer')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"parameters": {
+					"DBName": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"type": "AzureSqlDW",
+				"typeProperties": {
+					"connectionString": "[parameters('synapse5ox7t4s-WorkspaceDefaultSqlServer_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/synapse5ox7t4s-WorkspaceDefaultStorage')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('synapse5ox7t4s-WorkspaceDefaultStorage_properties_typeProperties_url')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/synapse9nlosdj-WorkspaceDefaultSqlServer')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"parameters": {
+					"DBName": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"type": "AzureSqlDW",
+				"typeProperties": {
+					"connectionString": "[parameters('synapse9nlosdj-WorkspaceDefaultSqlServer_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/synapsedtg248c-WorkspaceDefaultSqlServer')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"parameters": {
+					"DBName": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"type": "AzureSqlDW",
+				"typeProperties": {
+					"connectionString": "[parameters('synapsedtg248c-WorkspaceDefaultSqlServer_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/AutoResolveIntegrationRuntime')]",
+			"type": "Microsoft.Synapse/workspaces/integrationRuntimes",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "Managed",
+				"typeProperties": {
+					"computeProperties": {
+						"location": "AutoResolve",
+						"dataFlowProperties": {
+							"computeType": "General",
+							"coreCount": 8,
+							"timeToLive": 0
+						}
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/WorkspaceSystemIdentity')]",
+			"type": "Microsoft.Synapse/workspaces/credentials",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "ManagedIdentity",
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/01 serverless sql pool read files')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "serverless sql pool"
+				},
+				"content": {
+					"query": "-- read a single csv file\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'https://datalake5ox7t4s.dfs.core.windows.net/files/labs/03/2019.csv',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS [result]\n\n-- read a single text file\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'https://datalake5ox7t4s.dfs.core.windows.net/files/labs/03/in_folders/*.txt',\n        FORMAT = 'CSV',\n        -- FIELDTERMINATOR = ',',  -- Specify the field delimiter (e.g., comma for CSV)\n        -- ROWTERMINATOR = '\\n',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS [result]\n\n\n-- read only csv files in a single folder\n    -- folder may contain many other file types\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'https://datalake5ox7t4s.dfs.core.windows.net/files/labs/03/*.csv',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS [result]\norder by OrderDate ASC\n\n\n\n-- read a all csv files in a single folder\n    -- folder must contain only csv files\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'https://datalake5ox7t4s.dfs.core.windows.net/files/labs/03/in_folders/*.csv',\n        -- BULK 'https://datalake5ox7t4s.dfs.core.windows.net/files/labs/03/in_folders/*',\n        -- BULK 'https://datalake5ox7t4s.dfs.core.windows.net/files/labs/03/in_folders/**',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS [result]\norder by OrderDate ASC\n\n-- read data with schema (WITH)\n    -- orginal files don`t have headers\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'https://datalake5ox7t4s.dfs.core.windows.net/files/labs/02/*.csv',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0'\n    )\n    WITH (\n            SalesOrderNumber VARCHAR(10) COLLATE Latin1_General_100_BIN2_UTF8,\n            SalesOrderLineNumber INT,\n            OrderDate DATE,\n            CustomerName VARCHAR(25) COLLATE Latin1_General_100_BIN2_UTF8,\n            EmailAddress VARCHAR(50) COLLATE Latin1_General_100_BIN2_UTF8,\n            Item VARCHAR(30) COLLATE Latin1_General_100_BIN2_UTF8,\n            Quantity INT,\n            UnitPrice DECIMAL(18,2),\n            TaxAmount DECIMAL (18,2)\n    ) AS [result]\n\n-- using filepath() in results with csv files\n    -- reading all csv files in a folder\nSELECT\n    TOP 100 *,\n    [result].filepath(1) -- returns file name\nFROM\n    OPENROWSET(\n        BULK 'https://datalake5ox7t4s.dfs.core.windows.net/files/labs/02/csv/2019/*.csv',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0'\n    ) AS [result]\n\n    -- reading partitioned folder recursively\nSELECT\n    TOP 100 *,\n    [result].filepath(1) -- returns subfolder+filename\nFROM\n    OPENROWSET(\n        BULK 'https://datalake5ox7t4s.dfs.core.windows.net/files/labs/02/csv/**',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0'\n    ) AS [result]\n\n    -- reading partitioned folder\nSELECT\n    TOP 100 *,\n    [result].filepath(1) -- returns subfolder\nFROM\n    OPENROWSET(\n        BULK 'https://datalake5ox7t4s.dfs.core.windows.net/files/labs/02/csv/year=*/',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0'\n    ) AS [result]\n\n        -- reading partitioned folder,specific partition\nSELECT\n    TOP 100 *,\n    [result].filepath(1) -- returns subfolder\nFROM\n    OPENROWSET(\n        BULK 'https://datalake5ox7t4s.dfs.core.windows.net/files/labs/02/csv/year=19/*',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0'\n    ) AS [result]\n\n-- read single parqeut file\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'https://datalake5ox7t4s.dfs.core.windows.net/files/labs/02/parquet/2019.snappy.parquet',\n        FORMAT = 'PARQUET'\n    ) AS [result]\n\n\n\n-- read all parqeut files in a folders recursivly\n    -- only parquet files are in the folder\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'https://datalake9nlosdj.dfs.core.windows.net/files/dp-203/Allfiles/labs/02/parquet/**',\n        FORMAT = 'PARQUET'\n    ) AS [result]\n\n\n-- using filepath() in results with parquet files\nSELECT\n    TOP 100 *,\n    [result].filepath(1)\nFROM\n    OPENROWSET(\n        BULK 'https://datalake9nlosdj.dfs.core.windows.net/files/dp-203/Allfiles/labs/02/parquet/year=*/',\n        FORMAT = 'PARQUET'\n    ) AS [result]\n\n\n-- read and aggregating parquet data\nSELECT\n    YEAR(OrderDate) AS OrderYear,\n    COUNT(*) AS Order_Items\nFROM\n    OPENROWSET(\n        BULK 'https://datalake5ox7t4s.dfs.core.windows.net/files/labs/02/parquet/**',\n        FORMAT = 'PARQUET'\n    ) AS [result]\nGROUP BY YEAR(OrderDate)\nORDER BY OrderYear\n\n\n-- read parquet data from partitions\nSELECT\n    YEAR(OrderDate) AS OrderYear,\n    COUNT(*) AS Order_Items\nFROM\n    OPENROWSET(\n        BULK 'https://datalake9nlosdj.dfs.core.windows.net/files/dp-203/Allfiles/labs/02/parquet/year=*/',\n        FORMAT = 'PARQUET'\n    ) AS [result]\nWHERE [result].filepath(1) IN ('2019', '2020')\nGROUP BY YEAR(OrderDate)\nORDER BY OrderYear\n\n-- read json files\nSELECT TOP 100\n    jsonContent\n    ,JSON_VALUE (jsonContent, '$.SalesOrderNumber') AS SalesOrderNumber\n    ,JSON_VALUE (jsonContent, '$.CustomerName') AS CustomerName\nFROM\n    OPENROWSET(\n        BULK 'https://datalake5ox7t4s.dfs.core.windows.net/files/labs/02/json',\n        FORMAT = 'CSV',\n        FIELDQUOTE = '0x0b',\n        FIELDTERMINATOR ='0x0b',\n        ROWTERMINATOR = '0x0b'\n    )\n    WITH (\n        jsonContent varchar(MAX)\n    ) AS [result]\n\n    -- **** see script 14 for an alternative way\n\n-- read any text file\n    -- tab seperated file\n    -- rows are in new lines\nSELECT TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'https://datalake9nlosdj.dfs.core.windows.net/files/dp-203/Allfiles/labs/02/text/sample.txt',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE,\n        -- FIELDQUOTE = '0x0b',\n        FIELDTERMINATOR = '\\t', \n        ROWTERMINATOR = '\\n'\n    ) AS [result]\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "master",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/02 serverless sql pool external tables')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "serverless sql pool"
+				},
+				"content": {
+					"query": "-- 1) new database\nCREATE DATABASE Sales\n  COLLATE Latin1_General_100_BIN2_UTF8;\nGO;\n\nCREATE SCHEMA csv\ngo;\n\nUse Sales;\nGO;\n-- 2) scoped creds (if needed)\n    -- if not authenticated with Synapse\n\n-- 3) new data source\n-- DROP EXTERNAL DATA SOURCE sales_data\nCREATE EXTERNAL DATA SOURCE sales_data WITH (\n    LOCATION = 'abfss://files@datalake5ox7t4s.dfs.core.windows.net/labs/02/'\n);\nGO;\n\nCREATE EXTERNAL DATA SOURCE external_table_data WITH (\n    LOCATION = 'https://datalake5ox7t4s.dfs.core.windows.net/files/labs/external_table_data/'\n);\nGO;\n\nCREATE EXTERNAL DATA SOURCE lab_03_data WITH (\n    LOCATION = 'https://datalake5ox7t4s.dfs.core.windows.net/files/labs/03/'\n);\nGO;\n\n-- 4) file format\n\n    -- csv format\nCREATE EXTERNAL FILE FORMAT CsvFormat\n    WITH (\n        FORMAT_TYPE = DELIMITEDTEXT,\n        FORMAT_OPTIONS(\n            FIELD_TERMINATOR = ',',\n            STRING_DELIMITER = '\"'\n        )\n    );\nGO;\n\n    -- parquet format\n-- drop EXTERNAL FILE FORMAT ParquetFormat\nCREATE EXTERNAL FILE FORMAT ParquetFormat\n    WITH (\n            FORMAT_TYPE = PARQUET,\n            DATA_COMPRESSION = 'org.apache.hadoop.io.compress.SnappyCodec'\n        );\nGO;\n\n\n-- 5) external table\n-- DROP EXTERNAL TABLE csv.orders\n\n    -- exsting csv files\nCREATE EXTERNAL TABLE orders\n(\n    SalesOrderNumber VARCHAR(10),\n    SalesOrderLineNumber INT,\n    OrderDate DATE,\n    CustomerName VARCHAR(25),\n    EmailAddress VARCHAR(50),\n    Item VARCHAR(30),\n    Quantity INT,\n    UnitPrice DECIMAL(18,2),\n    TaxAmount DECIMAL (18,2)\n)\nWITH\n(\n    DATA_SOURCE =sales_data,\n    LOCATION = '*.csv',\n    FILE_FORMAT = CsvFormat\n);\nGO\n\nCREATE TABLE orders2\n\n\nSELECT TOP 100 * FROM dbo.orders\n\n    -- existing parquet files\n-- DROP EXTERNAL TABLE dbo.ordersParquet\n-- ********* NOT WORKING *****\nCREATE EXTERNAL TABLE dbo.ordersParquet\n(\n    Product VARCHAR(8),\n    ItemsSold BIGINT,\n    NetRevenue FLOAT\n)\nWITH (\n    DATA_SOURCE =external_table_data,\n    LOCATION = 'productsales/',\n    FILE_FORMAT = ParquetFormat\n);\nGO\n\n\n-- create external table as select (CETAS)\n-- drop EXTERNAL table dbo.ProductSalesTotals\n\nCREATE EXTERNAL TABLE ProductSalesTotals\n    WITH (\n        LOCATION = 'productsales/',\n        DATA_SOURCE = external_table_data,\n        FILE_FORMAT = ParquetFormat\n    )\nAS\nSELECT Item AS Product,\n    SUM(Quantity) AS ItemsSold,\n    ROUND(SUM(UnitPrice) - SUM(TaxAmount), 2) AS NetRevenue\nFROM\n    OPENROWSET(\n        BULK '*.csv', -- relative path only as DATA_SOURCE is given\n        DATA_SOURCE = 'lab_03_data',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS orders\nGROUP BY Item;\n\n\n-- query external table\nSELECT TOP 100 * FROM [dbo].[orders]\nSELECT TOP 100 * FROM [dbo].[ordersParquet]\nSELECT TOP 100 * FROM [dbo].[ProductSalesTotals]\n\nSELECT YEAR(OrderDate) AS OrderYear,\n        MONTH(OrderDate) AS OrderMonth,\n        SUM(Quantity) Quantity,\n       SUM((UnitPrice * Quantity) + TaxAmount) AS GrossRevenue\nFROM dbo.orders\nGROUP BY YEAR(OrderDate), MONTH(OrderDate)\nORDER BY OrderYear, OrderMonth;\n\n-- **********************\n-- keep things neat in a stored procedure\nUSE Sales;\nGO;\n\nDROP PROCEDURE sp_GetYearlySales\n\nCREATE PROCEDURE sp_GetYearlySales\nAS\nBEGIN\n    -- drop existing table\n    IF EXISTS (\n            SELECT * FROM sys.external_tables\n            WHERE name = 'YearlySalesTotals'\n        )\n        DROP EXTERNAL TABLE YearlySalesTotals\n    -- create external table\n    CREATE EXTERNAL TABLE YearlySalesTotals\n    WITH (\n            LOCATION = 'yearlysales/',\n            DATA_SOURCE = external_table_data,\n            FILE_FORMAT = ParquetFormat\n        )\n    AS\n    SELECT YEAR(OrderDate) AS CalendarYear,\n            SUM(Quantity) AS ItemsSold,\n            ROUND(SUM(UnitPrice) - SUM(TaxAmount), 2) AS NetRevenue\n    FROM\n        OPENROWSET(\n            BULK '*.csv',\n            DATA_SOURCE = 'lab_03_data',\n            FORMAT = 'CSV',\n            PARSER_VERSION = '2.0',\n            HEADER_ROW = TRUE\n        ) AS orders\n    GROUP BY YEAR(OrderDate)\nEND\n\nEXEC sp_GetYearlySales;\n\nSELECT * FROM dbo.YearlySalesTotals\n\nCREATE VIEW orders_v as\nselect * from dbo.ProductSalesTotals\n\nselect * from dbo.orders_v\n\n---- stored procedure for pipeline\n-- DROP PROCEDURE sp_GetYearlySales_pipeline\nCREATE PROCEDURE sp_GetYearlySales_pipeline\nAS\nBEGIN\n    -- drop existing table\n    IF EXISTS (\n            SELECT * FROM sys.external_tables\n            WHERE name = 'YearlySalesTotals'\n        )\n        DROP EXTERNAL TABLE YearlySalesTotals\n    -- create external table\n    CREATE EXTERNAL TABLE YearlySalesTotals\n    WITH (\n            LOCATION = 'yearlysales_pipeline/',\n            DATA_SOURCE = external_table_data,\n            FILE_FORMAT = ParquetFormat\n        )\n    AS\n    SELECT YEAR(OrderDate) AS CalendarYear,\n            SUM(Quantity) AS ItemsSold,\n            ROUND(SUM(UnitPrice) - SUM(TaxAmount), 2) AS NetRevenue\n    FROM\n        OPENROWSET(\n            BULK '*.csv',\n            DATA_SOURCE = 'lab_03_data',\n            FORMAT = 'CSV',\n            PARSER_VERSION = '2.0',\n            HEADER_ROW = TRUE\n        ) AS orders\n    GROUP BY YEAR(OrderDate)\nEND\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "Sales",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/03 lake database querying')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "serverless sql pool"
+				},
+				"content": {
+					"query": "-- general lake db queries\nSELECT TOP (100) [CustomerId]\n,[FirstName]\n,[LastName]\n,[EmailAddress]\n,[Phone]\n FROM [RetailDB].[dbo].[Customer]\n\n SELECT TOP (100) *\n FROM [RetailDB].[dbo].[Product]\n\n SELECT TOP (100) *\n FROM [RetailDB].[dbo].[SalesOrder]\n\n\nSELECT \n    o.SalesOrderID, \n    c.EmailAddress, \n    p.ProductName, \n    o.Quantity\nFROM \n    SalesOrder AS o\nJOIN Customer AS c \n    ON o.CustomerId = c.CustomerId\nJOIN Product AS p \n    ON o.ProductId = p.ProductId\n\n-- insert records *** NOT POSSIBLE ***\nINSERT INTO [RetailDB].[dbo].[SalesOrder]\nVALUES (99999, CAST('2022-01-01' AS Datetime), 1, 6, 5, 1)\n\n\n-- create new external table\n    -- **** NOT POSSIBLE ****\n    -- can`t use CREATE EXTERNAL DATA SOURCE, CREATE EXTERNAL FILE FORMAT\n\n-- create views\n\nCREATE SCHEMA Sales\n\nCREATE VIEW Sales.SalesOrderView AS\nSELECT *\nFROM \n    [RetailDB].[dbo].[SalesOrder];\n\nSELECT *\nFROM \n    [RetailDB].[Sales].[SalesOrderView];\n\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "RetailDB",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/04 serverless pool security')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "serverless sql pool"
+				},
+				"content": {
+					"query": "use Sales \ngo\n\n-- create login \nCREATE LOGIN [test@dilrukshinioutlook.onmicrosoft.com] from external provider;\n\n-- create user\nCREATE USER test from LOGIN [test@dilrukshinioutlook.onmicrosoft.com]\n\n-- add user\nALTER ROLE db_datareader\nADD MEMBER test\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "Sales",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/05 dedicated sql pool querying')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "dedicated sql pool"
+				},
+				"content": {
+					"query": "SELECT  d.CalendarYear AS Year,\n        SUM(i.SalesAmount) AS InternetSalesAmount\nFROM FactInternetSales AS i\nJOIN DimDate AS d ON i.OrderDateKey = d.DateKey\nGROUP BY d.CalendarYear\nORDER BY Year;\n\n-- snowflake joins\nSELECT  d.CalendarYear AS Year,\n        d.MonthNumberOfYear as Month,\n        SUM(i.SalesAmount) AS InternetSalesAmount\nFROM FactInternetSales AS i\nJOIN DimDate AS d ON i.OrderDateKey = d.DateKey\nGROUP BY d.CalendarYear, d.MonthNumberOfYear\nORDER BY Year, Month; -- can use alias??\n\n\nSELECT  d.CalendarYear AS Year,\n        g.EnglishCountryRegionName as Region,\n        SUM(i.SalesAmount) AS InternetSalesAmount\nFROM FactInternetSales AS i\nJOIN DimDate AS d ON i.OrderDateKey = d.DateKey\nJOIN DimCustomer as c ON i.CustomerKey = c.CustomerKey\nJOIN DimGeography as g on c.GeographyKey = g.GeographyKey\nGROUP BY d.CalendarYear, g.EnglishCountryRegionName\nORDER BY Year, Region; -- can use alias??\n\n\nSELECT  d.CalendarYear AS Year,\n        pc.EnglishProductCategoryName AS ProductCategory,\n        g.EnglishCountryRegionName AS Region,\n        SUM(i.SalesAmount) AS InternetSalesAmount\nFROM FactInternetSales AS i\nJOIN DimDate AS d ON i.OrderDateKey = d.DateKey\nJOIN DimCustomer AS c ON i.CustomerKey = c.CustomerKey\nJOIN DimGeography AS g ON c.GeographyKey = g.GeographyKey\nJOIN DimProduct AS p ON i.ProductKey = p.ProductKey\nJOIN DimProductSubcategory AS ps ON p.ProductSubcategoryKey = ps.ProductSubcategoryKey\nJOIN DimProductCategory AS pc ON ps.ProductCategoryKey = pc.ProductCategoryKey\nGROUP BY d.CalendarYear, pc.EnglishProductCategoryName, g.EnglishCountryRegionName\nORDER BY Year, ProductCategory, Region;\n\n\n-- partitions\n    -- note there is no group by\nSELECT  g.EnglishCountryRegionName AS Region,\n        ROW_NUMBER() OVER(PARTITION BY g.EnglishCountryRegionName\n                          ORDER BY i.SalesAmount ASC) AS RowNumber,\n        i.SalesOrderNumber AS OrderNo,\n        i.SalesOrderLineNumber AS LineItem,\n        i.SalesAmount AS SalesAmount,\n        SUM(i.SalesAmount) OVER(PARTITION BY g.EnglishCountryRegionName) AS RegionTotal,\n        AVG(i.SalesAmount) OVER(PARTITION BY g.EnglishCountryRegionName) AS RegionAverage\nFROM FactInternetSales AS i\nJOIN DimDate AS d ON i.OrderDateKey = d.DateKey\nJOIN DimCustomer AS c ON i.CustomerKey = c.CustomerKey\nJOIN DimGeography AS g ON c.GeographyKey = g.GeographyKey\nWHERE d.CalendarYear = 2022\nORDER BY Region;\n\n\nSELECT  g.EnglishCountryRegionName AS Region,\n        g.City,\n        SUM(i.SalesAmount) AS CityTotal,\n        SUM(SUM(i.SalesAmount)) OVER(PARTITION BY g.EnglishCountryRegionName) AS RegionTotal,\n        RANK() OVER(PARTITION BY g.EnglishCountryRegionName\n                    ORDER BY SUM(i.SalesAmount) DESC) AS RegionalRank\nFROM FactInternetSales AS i\nJOIN DimDate AS d ON i.OrderDateKey = d.DateKey\nJOIN DimCustomer AS c ON i.CustomerKey = c.CustomerKey\nJOIN DimGeography AS g ON c.GeographyKey = g.GeographyKey\nGROUP BY g.EnglishCountryRegionName, g.City\nORDER BY Region;\n\n-- approximate count\nSELECT d.CalendarYear AS CalendarYear,\n    COUNT(DISTINCT i.SalesOrderNumber) AS Orders\nFROM FactInternetSales AS i\nJOIN DimDate AS d ON i.OrderDateKey = d.DateKey\nGROUP BY d.CalendarYear\nORDER BY CalendarYear;\n\nSELECT d.CalendarYear AS CalendarYear,\n    APPROX_COUNT_DISTINCT(i.SalesOrderNumber) AS Orders\nFROM FactInternetSales AS i\nJOIN DimDate AS d ON i.OrderDateKey = d.DateKey\nGROUP BY d.CalendarYear\nORDER BY CalendarYear;\n\n\n-- excercise \n\nSELECT  FiscalYear AS FiscalYear,\n        FiscalQuarter as FiscalQuarter,\n        SUM(OrderQuantity) OrderQuantity\nfrom FactInternetSales AS i\nJOIN DimDate AS d ON i.OrderDateKey = d.DateKey\ngroup by FiscalYear, FiscalQuarter\n\nSELECT  FiscalYear AS FiscalYear,\n        FiscalQuarter as FiscalQuarter,\n        SalesTerritoryRegion as TerritoryRegion,\n        ps.ProductCategoryKey as ProductCategoryKey, \n        SUM(OrderQuantity) OrderQuantity\nfrom FactInternetSales AS i\nJOIN DimDate AS d ON i.OrderDateKey = d.DateKey\nJOIN DimSalesTerritory as t on i.SalesTerritoryKey = t.SalesTerritoryKey\nJOIN DimProduct AS p ON i.ProductKey = p.ProductKey\nJOIN DimProductSubcategory AS ps ON p.ProductSubcategoryKey = ps.ProductSubcategoryKey\nJOIN DimProductCategory AS pc ON ps.ProductCategoryKey = pc.ProductCategoryKey\ngroup by FiscalYear, FiscalQuarter, SalesTerritoryRegion, ps.ProductCategoryKey\n\nSELECT  FiscalYear AS FiscalYear,\n        SalesTerritoryRegion as TerritoryRegion,\n        RANK() OVER (PARTITION by FiscalYear order by SUM(SalesAmount)) as rank,\n        SUM(SalesAmount) totalSalesAmount\nfrom FactInternetSales AS i\nJOIN DimDate AS d ON i.OrderDateKey = d.DateKey\nJOIN DimSalesTerritory as t on i.SalesTerritoryKey = t.SalesTerritoryKey\ngroup by FiscalYear, SalesTerritoryRegion\norder by FiscalYear\n\n\n\n\n\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "sql9nlosdj",
+						"poolName": "sql9nlosdj"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/06 dedicated sql pool loading data')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "dedicated sql pool"
+				},
+				"content": {
+					"query": "-- creating staging tables\nCREATE TABLE [dbo].[StageProduct](\n    [ProductID] [nvarchar](30) NULL,\n    [ProductName] [nvarchar](50) NULL,\n    [ProductCategory] [nvarchar](24) NULL,\n    [Color] [nvarchar](30) NULL,\n    [Size] [nvarchar](50) NULL,\n    [ListPrice] [money] NULL,\n    [Discontinued] [bit] NULL)\nWITH\n(\n\tDISTRIBUTION = ROUND_ROBIN,\n\tCLUSTERED COLUMNSTORE INDEX\n)\n\nCREATE TABLE [dbo].[StageCustomer]\n( \n\t[GeographyKey] [int]  NULL,\n\t[CustomerAlternateKey] [nvarchar](15)  NOT NULL,\n\t[Title] [nvarchar](8)  NULL,\n\t[FirstName] [nvarchar](50)  NULL,\n\t[MiddleName] [nvarchar](50)  NULL,\n\t[LastName] [nvarchar](50)  NULL,\n\t[NameStyle] [bit]  NULL,\n\t[BirthDate] [date]  NULL,\n\t[MaritalStatus] [nchar](1)  NULL,\n\t[Suffix] [nvarchar](10)  NULL,\n\t[Gender] [nvarchar](1)  NULL,\n\t[EmailAddress] [nvarchar](50)  NULL,\n\t[YearlyIncome] [money]  NULL,\n\t[TotalChildren] [tinyint]  NULL,\n\t[NumberChildrenAtHome] [tinyint]  NULL,\n\t[EnglishEducation] [nvarchar](40)  NULL,\n\t[SpanishEducation] [nvarchar](40)  NULL,\n\t[FrenchEducation] [nvarchar](40)  NULL,\n\t[EnglishOccupation] [nvarchar](100)  NULL,\n\t[SpanishOccupation] [nvarchar](100)  NULL,\n\t[FrenchOccupation] [nvarchar](100)  NULL,\n\t[HouseOwnerFlag] [nchar](1)  NULL,\n\t[NumberCarsOwned] [tinyint]  NULL,\n\t[AddressLine1] [nvarchar](120)  NULL,\n\t[AddressLine2] [nvarchar](120)  NULL,\n\t[Phone] [nvarchar](20)  NULL,\n\t[DateFirstPurchase] [date]  NULL,\n\t[CommuteDistance] [nvarchar](15)  NULL\n)\nWITH\n(\n\tDISTRIBUTION = ROUND_ROBIN,\n\tCLUSTERED COLUMNSTORE INDEX\n)\n\n\n-- load data\nCOPY INTO dbo.StageProduct\n    (ProductID, ProductName, ProductCategory, Color, Size, ListPrice, Discontinued)\nFROM 'https://datalake9nlosdj.dfs.core.windows.net/files/dp-203/Allfiles/labs/09/data/Product.csv'\nWITH\n(\n    FILE_TYPE = 'CSV',\n    MAXERRORS = 0,\n    IDENTITY_INSERT = 'OFF',\n    FIRSTROW = 2 --Skip header row\n);\n\n\n-- load data with error tracking\nCOPY INTO dbo.StageCustomer\n(GeographyKey, CustomerAlternateKey, Title, FirstName, MiddleName, LastName, NameStyle, BirthDate, \nMaritalStatus, Suffix, Gender, EmailAddress, YearlyIncome, TotalChildren, NumberChildrenAtHome, EnglishEducation, \nSpanishEducation, FrenchEducation, EnglishOccupation, SpanishOccupation, FrenchOccupation, HouseOwnerFlag, \nNumberCarsOwned, AddressLine1, AddressLine2, Phone, DateFirstPurchase, CommuteDistance)\nFROM 'https://datalake9nlosdj.dfs.core.windows.net/files/dp-203/Allfiles/labs/09/data/Customer.csv'\nWITH\n(\n    FILE_TYPE = 'CSV'\n    ,MAXERRORS = 5\n    ,FIRSTROW = 2 -- skip header row\n    ,ERRORFILE = 'https://datalake9nlosdj.dfs.core.windows.net/files/load_errors'\n);\n\n\n--- populating DIM tables from saging table as CTAS\n-- DROP table dbo.DimProduct\nCREATE TABLE dbo.DimProduct\nWITH\n(\n    DISTRIBUTION = HASH(ProductAltKey),\n    CLUSTERED COLUMNSTORE INDEX\n)\nAS\nSELECT \n    ROW_NUMBER() OVER(ORDER BY ProductID) AS ProductKey,\n    ProductID AS ProductAltKey,\n    ProductName,\n    ProductCategory,\n    Color,\n    Size,\n    ListPrice,\n    Discontinued\nFROM dbo.StageProduct;\n\n-- prepare DIM table for type2 slowley chnaging dims\n    -- add new columns\nALTER TABLE dbo.DimCustomer\nADD EffectiveFrom DATETIME NULL;\n\nALTER TABLE dbo.DimCustomer\nADD EffectiveTo DATETIME NULL;\n\nALTER TABLE dbo.DimCustomer\nADD IsCurrent VARCHAR(1) NULL;\n\n    -- populate data for existing rows\nUPDATE dbo.DimCustomer\nSET EffectiveFrom = '1753-01-01 00:00:00',\n    EffectiveTo = NULL,\n    IsCurrent = 'Y';\n\n-- populating DIM tables with slowly changing dimensions\n    -- new records\nINSERT INTO dbo.DimCustomer ([GeographyKey],[CustomerAlternateKey],[Title],[FirstName],[MiddleName],[LastName],[NameStyle],[BirthDate],[MaritalStatus],\n[Suffix],[Gender],[EmailAddress],[YearlyIncome],[TotalChildren],[NumberChildrenAtHome],[EnglishEducation],[SpanishEducation],[FrenchEducation],\n[EnglishOccupation],[SpanishOccupation],[FrenchOccupation],[HouseOwnerFlag],[NumberCarsOwned],[AddressLine1],[AddressLine2],[Phone],\n[DateFirstPurchase],[CommuteDistance])\nSELECT *\nFROM dbo.StageCustomer AS stg\nWHERE NOT EXISTS\n    (SELECT * FROM dbo.DimCustomer AS dim\n    WHERE dim.CustomerAlternateKey = stg.CustomerAlternateKey);\n\n    -- Type 1 updates (change name, email, or phone in place)\nUPDATE dbo.DimCustomer\nSET LastName = stg.LastName,\n    EmailAddress = stg.EmailAddress,\n    Phone = stg.Phone\nFROM DimCustomer dim inner join StageCustomer stg\nON dim.CustomerAlternateKey = stg.CustomerAlternateKey\nWHERE dim.LastName <> stg.LastName OR dim.EmailAddress <> stg.EmailAddress OR dim.Phone <> stg.Phone\n\n    -- Type 2 updates (address changes triggers new entry)\n        -- part 1 - existng record`s is_current to N\nUPDATE dbo.DimCustomer \nSET IsCurrent = 'N',\n    EffectiveTo = SYSDATETIME()\nFROM dbo.StageCustomer AS stg\nJOIN dbo.DimCustomer AS dim\nON stg.CustomerAlternateKey = dim.CustomerAlternateKey\nAND stg.AddressLine1 <> dim.AddressLine1;\n\n        -- part 2 - new records\nINSERT INTO dbo.DimCustomer\nSELECT stg.GeographyKey,stg.CustomerAlternateKey,stg.Title,stg.FirstName,stg.MiddleName,stg.LastName,stg.NameStyle,stg.BirthDate,stg.MaritalStatus,\nstg.Suffix,stg.Gender,stg.EmailAddress,stg.YearlyIncome,stg.TotalChildren,stg.NumberChildrenAtHome,stg.EnglishEducation,stg.SpanishEducation,stg.FrenchEducation,\nstg.EnglishOccupation,stg.SpanishOccupation,stg.FrenchOccupation,stg.HouseOwnerFlag,stg.NumberCarsOwned,stg.AddressLine1,stg.AddressLine2,stg.Phone,\nstg.DateFirstPurchase,stg.CommuteDistance, SYSDATETIME(), NULL, 'Y'\nFROM dbo.StageCustomer AS stg\nJOIN dbo.DimCustomer AS dim\nON stg.CustomerAlternateKey = dim.CustomerAlternateKey\nAND stg.AddressLine1 <> dim.AddressLine1;\n\n    -- confirming\nselect * from dbo.DimCustomer\nwhere CustomerAlternateKey = 'AW00011864'\n\n\n\n\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "sql9nlosdj",
+						"poolName": "sql9nlosdj"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/08 delta lake with serverless sql pool')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"folder": {
+					"name": "serverless sql pool"
+				},
+				"content": {
+					"query": "-- read delta files\nSELECT\n    TOP 100 *\nFROM\n    OPENROWSET(\n        BULK 'https://datalake9nlosdj.dfs.core.windows.net/files/delta_lake/sink_demo_sink/',\n        FORMAT = 'DELTA'\n    ) AS [result]\n\n-- using lake database tables\nCREATE DATABASE DeltaDB\n      COLLATE Latin1_General_100_BIN2_UTF8;\nGO;\n\nUSE DeltaDB;\nGO\n-- DROP EXTERNAL DATA SOURCE DeltaLakeStore\nCREATE EXTERNAL DATA SOURCE DeltaLakeStore\nWITH\n(\n    LOCATION = 'https://datalake9nlosdj.dfs.core.windows.net/files/delta_lake'\n);\nGO\n\nSELECT TOP 10 *\nFROM OPENROWSET(\n        BULK '/sink_demo_sink',\n        DATA_SOURCE = 'DeltaLakeStore',\n        FORMAT = 'DELTA'\n    ) as deltadata;\n    \n\n-- Accessing Spark meta store\n-- By default, Spark catalog tables are created in a database named \"default\"\n-- If you created another database using Spark SQL, you can use it here\nUSE default;\nGO \nSELECT * FROM tbl_orders;\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "default",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/14 Serverless SQL w Synapse Link CosmosDB')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "-- create credential with SAS token\nCREATE CREDENTIAL [cosmos9nlosdj1]\nWITH IDENTITY = 'SHARED ACCESS SIGNATURE',\nSECRET = ''\nGO\n\n-- query data\nSELECT TOP 100 *\nFROM OPENROWSET(​PROVIDER = 'CosmosDB',\n                CONNECTION = 'Account=cosmos9nlosdj1;Database=AdventureWorks',\n                OBJECT = 'Sales',\n                SERVER_CREDENTIAL = 'cosmos9nlosdj1'\n) AS [Sales]\n\n-- expand json values\nSELECT \n    id, \n    customerid, \n    JSON_VALUE (customerdetails, '$.customername') AS SalesOrderNumber\n    ,JSON_VALUE (customerdetails, '$.customeremail') AS CustomerName\nFROM OPENROWSET(​PROVIDER = 'CosmosDB',\n                CONNECTION = 'Account=cosmos9nlosdj1;Database=AdventureWorks',\n                OBJECT = 'Sales',\n                SERVER_CREDENTIAL = 'cosmos9nlosdj1'\n) AS [Sales]\n\n-- alternative way\nSELECT *\nFROM OPENROWSET(​PROVIDER = 'CosmosDB',\n                CONNECTION = 'Account=cosmos9nlosdj1;Database=AdventureWorks',\n                OBJECT = 'Sales',\n                SERVER_CREDENTIAL = 'cosmos9nlosdj1'\n)\nWITH (\n    OrderID VARCHAR(10) '$.id',\n    OrderDate VARCHAR(10) '$.orderdate',\n    CustomerID INTEGER '$.customerid',\n    CustomerName VARCHAR(40) '$.customerdetails.customername',\n    CustomerEmail VARCHAR(30) '$.customerdetails.customeremail',\n    Product VARCHAR(30) '$.product',\n    Quantity INTEGER '$.quantity',\n    Price FLOAT '$.price'\n)\nAS sales\nORDER BY OrderID;",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "master",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/15 Security Access Control')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "CREATE USER \nfrom external source \nwith default_schema=dbo\n\nCREATE USER [test@kushanthaoutlook.onmicrosoft.com] \nFROM EXTERNAL PROVIDER \nWITH DEFAULT_SCHEMA = [dbo];\n\nEXEC sp_addrolemember 'db_owner', '[test@kushanthaoutlook.onmicrosoft.com]';\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "Sales",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/07 spark pool trasform data')]",
+			"type": "Microsoft.Synapse/workspaces/notebooks",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"nbformat": 4,
+				"nbformat_minor": 2,
+				"bigDataPool": {
+					"referenceName": "spark9nlosdj",
+					"type": "BigDataPoolReference"
+				},
+				"sessionProperties": {
+					"driverMemory": "28g",
+					"driverCores": 4,
+					"executorMemory": "28g",
+					"executorCores": 4,
+					"numExecutors": 2,
+					"conf": {
+						"spark.dynamicAllocation.enabled": "false",
+						"spark.dynamicAllocation.minExecutors": "2",
+						"spark.dynamicAllocation.maxExecutors": "2",
+						"spark.autotune.trackingId": "2733216f-ff6e-48bc-83cb-426d408ae525"
+					}
+				},
+				"metadata": {
+					"saveOutput": true,
+					"enableDebugMode": false,
+					"kernelspec": {
+						"name": "synapse_pyspark",
+						"display_name": "Synapse PySpark"
+					},
+					"language_info": {
+						"name": "python"
+					},
+					"a365ComputeOptions": {
+						"id": "/subscriptions/3ab7621d-8ee4-445a-8dd2-8b1f6718c4dc/resourceGroups/dp203-9nlosdj/providers/Microsoft.Synapse/workspaces/synapse9nlosdj/bigDataPools/spark9nlosdj",
+						"name": "spark9nlosdj",
+						"type": "Spark",
+						"endpoint": "https://synapse9nlosdj.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/spark9nlosdj",
+						"auth": {
+							"type": "AAD",
+							"authResource": "https://dev.azuresynapse.net"
+						},
+						"sparkVersion": "3.4",
+						"nodeCount": 3,
+						"cores": 4,
+						"memory": 28
+					},
+					"sessionKeepAliveTimeout": 30
+				},
+				"cells": [
+					{
+						"cell_type": "markdown",
+						"source": [
+							"# Transform data by using Spark\n",
+							"\n",
+							"Apache Spark provides a distributed data processing platform that you can use to perform complex data transformations at scale.\n",
+							"\n",
+							"\n",
+							"## Load source data\n",
+							"\n",
+							"Let's start by loading some historical sales order data into a dataframe.\n",
+							"\n",
+							"Review the code in the cell below, which loads the sales order from all of the csv files within the **data** directory. Then click the **&#9655;** button to the left of the cell to run it.\n",
+							"\n",
+							"> **Note**: The first time you run a cell in a notebook, the Spark pool must be started; which can take several minutes."
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"collapsed": false
+						},
+						"source": [
+							"# infer schema\n",
+							"root_folder = 'abfss://files@datalake9nlosdj.dfs.core.windows.net/dp-203/Allfiles/labs/06'\n",
+							"order_details = spark.read.csv(root_folder+'/data/*.csv', header=True, inferSchema=True)\n",
+							"display(order_details.limit(5))"
+						],
+						"outputs": [],
+						"execution_count": 1
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"display(order_details.limit(5))"
+						],
+						"outputs": [],
+						"execution_count": 22
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# check schema\r\n",
+							"order_details.printSchema()"
+						],
+						"outputs": [],
+						"execution_count": 5
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# custom schema\r\n",
+							"from pyspark.sql.types import *\r\n",
+							"# from spark.sql.functions import *\r\n",
+							"custom_schema = StructType(\r\n",
+							"    [\r\n",
+							"        StructField('SalesOrderNumber', StringType()),\r\n",
+							"        StructField('SalesOrderLineNumber', StringType()),\r\n",
+							"        StructField('OrderDate', DateType()),\r\n",
+							"        StructField('CustomerName', StringType()),\r\n",
+							"        StructField('EmailAddress', StringType()),\r\n",
+							"        StructField('Item', StringType()),\r\n",
+							"        StructField('Quantity', FloatType()),\r\n",
+							"        StructField('UnitPrice', FloatType()),\r\n",
+							"        StructField('TaxAmount', FloatType()),\r\n",
+							"    ]\r\n",
+							")\r\n",
+							"\r\n",
+							"order_details = spark.read.load(\r\n",
+							"    path=root_folder+'/data/*.csv',\r\n",
+							"    format='csv',\r\n",
+							"    schema=custom_schema,\r\n",
+							"    header=True\r\n",
+							")\r\n",
+							"\r\n",
+							"order_details.printSchema()\r\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": 15
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"## Transform the data structure\r\n",
+							"\r\n",
+							"The source data includes a **CustomerName** field, that contains the customer's first and last name. Let's modify the dataframe to separate this field into separate **FirstName** and **LastName** fields."
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"order_details.columns"
+						],
+						"outputs": [],
+						"execution_count": 17
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"# select columns\r\n",
+							"order_details_s = order_details.select('OrderDate', 'SalesOrderNumber', 'TaxAmount')\r\n",
+							"# OR order_details_s = order_details['SalesOrderNumber', 'TaxAmount']\r\n",
+							"display(order_details_s.limit(10))"
+						],
+						"outputs": [],
+						"execution_count": 25
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"# select columns, filter\r\n",
+							"order_details_s = order_details.select('SalesOrderNumber', 'TaxAmount').where(order_details['Item'] == 'Mountain-200 Silver, 38')\r\n",
+							"display(order_details_s.limit(10))"
+						],
+						"outputs": [],
+						"execution_count": 27
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"# new columns\r\n",
+							"from pyspark.sql.functions import split, col\r\n",
+							"\r\n",
+							"# Create the new FirstName and LastName fields\r\n",
+							"transformed_df = order_details.withColumn(\"FirstName\", split(col(\"CustomerName\"), \" \").getItem(0))\r\n",
+							"# transformed_df = transformed_df.withColumn(\"LastName\", split(col(\"CustomerName\"), \" \").getItem(1))\r\n",
+							"transformed_df = transformed_df.withColumn(\"LastName\", split(transformed_df[\"CustomerName\"], \" \").getItem(1))\r\n",
+							"\r\n",
+							"# Remove the CustomerName field\r\n",
+							"transformed_df = transformed_df.drop(\"EmailAddress\")\r\n",
+							"\r\n",
+							"display(transformed_df.limit(5))"
+						],
+						"outputs": [],
+						"execution_count": 2
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"# group by \r\n",
+							"from pyspark.sql.functions import year\r\n",
+							"order_details_s = order_details.select('OrderDate', 'TaxAmount').withColumn('OrderYear', year(col('OrderDate'))).groupBy('OrderYear').sum('TaxAmount')\r\n",
+							"# OR order_details_s = order_details['SalesOrderNumber', 'TaxAmount']\r\n",
+							"display(order_details_s.limit(10))"
+						],
+						"outputs": [],
+						"execution_count": 38
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# see notebook 14 for special functions for JSON"
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"## Save the transformed data\r\n",
+							"\r\n",
+							"After making the required changes to the data, you can save the results in a supported file format.\r\n",
+							"\r\n",
+							"> **Note**: Commonly, *Parquet* format is preferred for data files that you will use for further analysis or ingestion into an analytical store. Parquet is a very efficient format that is supported by most large scale data analytics systems. In fact, sometimes your data transformation requirement may simply be to convert data from another format (such as CSV) to Parquet!\r\n",
+							"\r\n",
+							"Use the following code to save the transformed dataframe in Parquet format (Overwriting the data if it already exists)."
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"rel_path = 'abfss://files@datalake9nlosdj.dfs.core.windows.net/spark_data'"
+						],
+						"outputs": [],
+						"execution_count": 8
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"transformed_df.write.mode(\"overwrite\").parquet(rel_path+'/transformed_data/orders.parquet')\r\n",
+							"print (\"Transformed data saved!\")"
+						],
+						"outputs": [],
+						"execution_count": 41
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"In the **files** tab (which should still be open above), navigate to the root **files** container and verify that a new folder named **transformed_data** has been created, containing a file named **orders.parquet**. Then return to this notebook."
+						]
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"## Partition data\n",
+							"\n",
+							"A common way to optimize performance when dealing with large volumes of data is to partition the data files based on one or more field values. This can significant improve performance and make it easier to filter data.\n",
+							"\n",
+							"Use the following cell to derive new **Year** and **Month** fields and then save the resulting data in Parquet format, partitioned by year and month."
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"from pyspark.sql.functions import year, month, col\r\n",
+							"\r\n",
+							"dated_df = transformed_df.withColumn(\"Year\", year(col(\"OrderDate\"))).withColumn(\"Month\", month(col(\"OrderDate\")))\r\n",
+							"display(dated_df.limit(5))\r\n",
+							"dated_df.write.partitionBy(\"Year\",\"Month\").mode(\"overwrite\").parquet(rel_path+\"/partitioned_data\")\r\n",
+							"print (\"Transformed data saved!\")"
+						],
+						"outputs": [],
+						"execution_count": 42
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"In the **files** tab (which should still be open above), navigate to the root **files** container and verify that a new folder named **partitioned_data** has been created, containing a hierachy of folders in the format **Year=*NNNN*** / **Month=*N***, each containing a .parquet file for the orders placed in the corresponding year and month. Then return to this notebook.\r\n",
+							"\r\n",
+							"You can read this data into a dataframe from any folder in the hierarchy, using explicit values or wildcards for partitioning fields. For example, use the following code to get the sales orders placed in 2020 for all months."
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"# read partitioned data\r\n",
+							"\r\n",
+							"# all months in 2020\r\n",
+							"orders_2020 = spark.read.parquet(rel_path+'/partitioned_data/Year=2020/Month=*')\r\n",
+							"display(orders_2020.limit(5))\r\n",
+							"\r\n",
+							"# all months in 2020 with Month column returned\r\n",
+							"orders_2020 = spark.read.parquet(rel_path+'/partitioned_data/Year=2020')\r\n",
+							"display(orders_2020.limit(5))\r\n",
+							"\r\n",
+							"# all months in 2020 with Year and Month column returned\r\n",
+							"orders_2020 = spark.read.parquet(rel_path+'/partitioned_data/')\r\n",
+							"display(orders_2020.limit(5))\r\n",
+							"\r\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": 51
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"## Write to tables"
+						]
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"### Temp views"
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"dated_df.createOrReplaceTempView('dated_df')\r\n",
+							"\r\n",
+							"display(spark.sql('select * from dated_df'))"
+						],
+						"outputs": [],
+						"execution_count": 74
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"### Categlog Tables"
+						]
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"#### From Dataframe"
+						]
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"##### External Tables\r\n",
+							"Specify a path"
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# EXTERNAL TABLE\r\n",
+							"# from dataframe as parquet\r\n",
+							"transformed_df.write.saveAsTable('tblx_orders',mode='overwrite', format='parquet', path=rel_path+'/external_tables/tblx_orders')"
+						],
+						"outputs": [],
+						"execution_count": 54
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# from dataframe as csv\r\n",
+							"transformed_df.write.saveAsTable('tblx_orders_csv',mode='overwrite', format='csv', path=rel_path+'/external_tables/tblx_orders_csv')"
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# natively with existing files\r\n",
+							"spark.catalog.createExternalTable(\r\n",
+							"    'tblx_orders2', path=rel_path+'/transformed_data/orders.parquet/', source='parquet'\r\n",
+							")"
+						],
+						"outputs": [],
+						"execution_count": 55
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# natively with existing files with partitions\r\n",
+							"spark.catalog.createExternalTable(\r\n",
+							"    'tblx_orders3', path=rel_path+'/partitioned_data/', source='parquet', partitionBy=\"Year,Month\"\r\n",
+							")"
+						],
+						"outputs": [],
+						"execution_count": 68
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"##### Managed (Internal) Tables"
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"transformed_df.write.saveAsTable('tbl_orders',mode='overwrite', format='parquet')"
+						],
+						"outputs": [],
+						"execution_count": 5
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"# list databases\r\n",
+							"display(spark.catalog.listDatabases())"
+						],
+						"outputs": [],
+						"execution_count": 3
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"# list tables\r\n",
+							"display(spark.catalog.listTables())"
+						],
+						"outputs": [],
+						"execution_count": 10
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"df = spark.sql(\"SELECT * FROM tblx_orders3\")\r\n",
+							"display(df.limit(10))"
+						],
+						"outputs": [],
+						"execution_count": 69
+					},
+					{
+						"cell_type": "markdown",
+						"source": [
+							"## SQL"
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"microsoft": {
+								"language": "sparksql"
+							},
+							"collapsed": false
+						},
+						"source": [
+							"%%sql\r\n",
+							"\r\n",
+							"SELECT * FROM dated_df\r\n",
+							"WHERE Year = 2021\r\n",
+							"    AND Month = 1"
+						],
+						"outputs": [],
+						"execution_count": 80
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"microsoft": {
+								"language": "sparksql"
+							},
+							"collapsed": false
+						},
+						"source": [
+							"%%sql\r\n",
+							"\r\n",
+							"DROP TABLE transformed_orders;\r\n",
+							"DROP TABLE sales_orders;"
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"microsoft": {
+								"language": "sparksql"
+							},
+							"collapsed": false
+						},
+						"source": [
+							"%%sql\r\n",
+							"\r\n",
+							"-- Catelog table - EXTERNAL\r\n",
+							"CREATE TABLE tbl_orders_sql\r\n",
+							"USING PARQUET\r\n",
+							"LOCATION 'abfss://files@datalake9nlosdj.dfs.core.windows.net/spark_data/transformed_data/orders.parquet'"
+						],
+						"outputs": [],
+						"execution_count": 9
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"microsoft": {
+								"language": "sparksql"
+							}
+						},
+						"source": [
+							"%%sql\r\n",
+							"-- Catelog table - Managed or External with empty folder\r\n",
+							"%%sql\r\n",
+							"\r\n",
+							"CREATE TABLE Tbl_ManagedSalesOrders\r\n",
+							"(\r\n",
+							"    Orderid INT NOT NULL,\r\n",
+							"    OrderDate TIMESTAMP NOT NULL,\r\n",
+							"    CustomerName STRING,\r\n",
+							"    SalesTotal FLOAT NOT NULL\r\n",
+							")\r\n",
+							"USING PARQUET"
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"microsoft": {
+								"language": "sparksql"
+							},
+							"collapsed": false
+						},
+						"source": [
+							"%%sql \r\n",
+							"\r\n",
+							"-- Querying data in other Lakehouse DBs\r\n",
+							"\r\n",
+							"USE RetailDB;\r\n",
+							"\r\n",
+							"SELECT * from Product;"
+						],
+						"outputs": [],
+						"execution_count": 7
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/08 Delta Lake with spark')]",
+			"type": "Microsoft.Synapse/workspaces/notebooks",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"nbformat": 4,
+				"nbformat_minor": 2,
+				"bigDataPool": {
+					"referenceName": "spark9nlosdj",
+					"type": "BigDataPoolReference"
+				},
+				"sessionProperties": {
+					"driverMemory": "28g",
+					"driverCores": 4,
+					"executorMemory": "28g",
+					"executorCores": 4,
+					"numExecutors": 2,
+					"conf": {
+						"spark.dynamicAllocation.enabled": "false",
+						"spark.dynamicAllocation.minExecutors": "2",
+						"spark.dynamicAllocation.maxExecutors": "2",
+						"spark.autotune.trackingId": "22e4b4e7-5e32-43ed-947c-67f33b21f4a7"
+					}
+				},
+				"metadata": {
+					"saveOutput": true,
+					"enableDebugMode": false,
+					"kernelspec": {
+						"name": "synapse_pyspark",
+						"display_name": "Synapse PySpark"
+					},
+					"language_info": {
+						"name": "python"
+					},
+					"a365ComputeOptions": {
+						"id": "/subscriptions/3ab7621d-8ee4-445a-8dd2-8b1f6718c4dc/resourceGroups/dp203-9nlosdj/providers/Microsoft.Synapse/workspaces/synapse9nlosdj/bigDataPools/spark9nlosdj",
+						"name": "spark9nlosdj",
+						"type": "Spark",
+						"endpoint": "https://synapse9nlosdj.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/spark9nlosdj",
+						"auth": {
+							"type": "AAD",
+							"authResource": "https://dev.azuresynapse.net"
+						},
+						"sparkVersion": "3.4",
+						"nodeCount": 3,
+						"cores": 4,
+						"memory": 28
+					},
+					"sessionKeepAliveTimeout": 30
+				},
+				"cells": [
+					{
+						"cell_type": "code",
+						"source": [
+							"root_folder = 'abfss://files@datalake9nlosdj.dfs.core.windows.net'"
+						],
+						"outputs": [],
+						"execution_count": 2
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"df = spark.read.load(root_folder+'/dp-203/Allfiles/labs/07/data//products.csv', format='csv'\r\n",
+							", header=True\r\n",
+							")\r\n",
+							"display(df.limit(10))"
+						],
+						"outputs": [],
+						"execution_count": 3
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"df.printSchema()"
+						],
+						"outputs": [],
+						"execution_count": 13
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"delta_table_path = root_folder+'/delta_lake/products'"
+						],
+						"outputs": [],
+						"execution_count": 4
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"## Writing as Delta format"
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# writing df as delta file\r\n",
+							"df.write.format(\"delta\").mode('overwrite').save(delta_table_path)"
+						],
+						"outputs": [],
+						"execution_count": 35
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"## Loading as Spark DF"
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"spark_delta_df = spark.read.load(path=delta_table_path, format=\"delta\")\r\n",
+							"display(spark_delta_df.limit(10))"
+						],
+						"outputs": [],
+						"execution_count": 38
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"# adding new rows -----------\r\n",
+							"# reading new rows\r\n",
+							"df_new = spark.read.load(root_folder+'/dp-203/Allfiles/labs/07/data2//new_product.txt', format='csv'\r\n",
+							", header=True\r\n",
+							")\r\n",
+							"# display(df.limit(10))\r\n",
+							"df_new.write.format('delta').mode('append').save(delta_table_path)\r\n",
+							"\r\n",
+							"spark_delta_df = spark.read.load(path=delta_table_path, format=\"delta\")\r\n",
+							"display(spark_delta_df.orderBy('productID').limit(10))\r\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": 11
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"## Loading data as Delta table"
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# loading data as Delta Table\r\n",
+							"from delta.tables import DeltaTable\r\n",
+							"# from pyspark.sql.functions import *\r\n",
+							"\r\n",
+							"# Create a deltaTable object\r\n",
+							"deltaTable = DeltaTable.forPath(spark, delta_table_path)"
+						],
+						"outputs": [],
+						"execution_count": 41
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"# View the updated data as a dataframe\r\n",
+							"display(deltaTable.toDF().limit(10))\r\n",
+							"\r\n",
+							"# View the updated data as a dataframe - alternative way\r\n",
+							"deltaTable.toDF().orderBy('productID').show(10)"
+						],
+						"outputs": [],
+						"execution_count": 50
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# Update the table (reduce price of product 771 by 10%)\r\n",
+							"deltaTable.update(\r\n",
+							"    condition = \"ProductID == 771\",\r\n",
+							"    set = { \"ListPrice\": \"ListPrice * 0.9\" }\r\n",
+							")"
+						],
+						"outputs": [],
+						"execution_count": 44
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# Update the table - to one of the later appended rows \r\n",
+							"deltaTable.update(\r\n",
+							"    condition = \"ProductID == 600\",\r\n",
+							"    set = { \"ListPrice\": \"ListPrice * 0.9\" }\r\n",
+							")"
+						],
+						"outputs": [],
+						"execution_count": 47
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# delete record\r\n",
+							"deltaTable.delete(\r\n",
+							"    condition=\"ProductID == 773\"\r\n",
+							")"
+						],
+						"outputs": [],
+						"execution_count": 49
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# delete record - one of the later appended rows \r\n",
+							"deltaTable.delete(\r\n",
+							"    condition=\"ProductID == 600\"\r\n",
+							")"
+						],
+						"outputs": [],
+						"execution_count": 52
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# history of changes\r\n",
+							"deltaTable.history(10).show(20, False, True)"
+						],
+						"outputs": [],
+						"execution_count": 64
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"## Querying versions"
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"df = spark.read.format(\"delta\").option(\"versionAsOf\", 3).load(delta_table_path)\r\n",
+							"display(df.orderBy('ProductID').limit(10))"
+						],
+						"outputs": [],
+						"execution_count": 56
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"df = spark.read.format(\"delta\").option(\"timestampAsOf\", '2024-12-28 09:20:35').load(delta_table_path)\r\n",
+							"display(df.orderBy('ProductID').limit(10))"
+						],
+						"outputs": [],
+						"execution_count": 60
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"## Creating catelog tables"
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"from delta.tables import DeltaTable\r\n",
+							"\r\n",
+							"DeltaTable.create(spark) \\\r\n",
+							"  .tableName(\"default.ManagedProducts\") \\\r\n",
+							"  .addColumn(\"Productid\", \"INT\") \\\r\n",
+							"  .addColumn(\"ProductName\", \"STRING\") \\\r\n",
+							"  .addColumn(\"Category\", \"STRING\") \\\r\n",
+							"  .addColumn(\"Price\", \"FLOAT\") \\\r\n",
+							"  .execute()"
+						],
+						"outputs": [],
+						"execution_count": 6
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"## Streaming dataset"
+						]
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"#### As source"
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"delta_table_path_stream_source = root_folder+'/delta_lake/products_stream_source'\r\n",
+							"delta_table_path_stream_sink = root_folder+'/delta_lake/products_stream_sink'\r\n",
+							"delta_table_path_stream_sink_cp = root_folder+'/delta_lake/products_stream_sink_checkpoint'\r\n",
+							"\r\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": 29
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# --------- preapring delta folder with empty folder\r\n",
+							"# Define the schema \r\n",
+							"from pyspark.sql.types import *\r\n",
+							"schema = StructType([ \r\n",
+							"    StructField(\"ProductID\", StringType(), True), \r\n",
+							"    StructField(\"ProductName\", StringType(), True), \r\n",
+							"    StructField(\"Category\", StringType(), True), \r\n",
+							"    StructField(\"ListPrice\", StringType(), True)\r\n",
+							"])\r\n",
+							"# Create an empty DataFrame with the schema \r\n",
+							"empty_df = spark.createDataFrame([], schema) \r\n",
+							"# Write the empty DataFrame to the Delta table location \r\n",
+							"empty_df.write.format(\"delta\").save(delta_table_path_stream_source)"
+						],
+						"outputs": [],
+						"execution_count": 17
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# Load a streaming dataframe from the Delta Table\r\n",
+							"stream_df = spark.readStream.format(\"delta\") \\\r\n",
+							"    .option(\"ignoreChanges\", \"true\") \\\r\n",
+							"    .load(delta_table_path_stream_source)"
+						],
+						"outputs": [],
+						"execution_count": 21
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# Now you can process the streaming data in the dataframe\r\n",
+							"# for example, write to data lake\r\n",
+							"q = stream_df.writeStream \\\r\n",
+							"    .outputMode(\"append\") \\\r\n",
+							"    .format(\"delta\").option(\"checkpointLocation\", delta_table_path_stream_sink_cp) \\\r\n",
+							"    .start(delta_table_path_stream_sink)"
+						],
+						"outputs": [],
+						"execution_count": 30
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# updating source to trigger sinking\r\n",
+							"# read new data with the schema \r\n",
+							"prod_id = 503\r\n",
+							"df_new = spark.read.load(path=root_folder+'/dp-203/Allfiles/labs/07/data_append/new_product_{}.csv'.format(prod_id), format='csv', schema=schema)\r\n",
+							"# Write the new DataFrame to the Delta table location \r\n",
+							"df_new.write.format(\"delta\").save(delta_table_path_stream_source, mode='append')"
+						],
+						"outputs": [],
+						"execution_count": 39
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"# for monitor\r\n",
+							"from delta.tables import DeltaTable\r\n",
+							"\r\n",
+							"deltaTable_source = DeltaTable.forPath(spark, delta_table_path_stream_source)\r\n",
+							"deltaTable_sink = DeltaTable.forPath(spark, delta_table_path_stream_sink)"
+						],
+						"outputs": [],
+						"execution_count": 32
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"# monitor here\r\n",
+							"display(deltaTable_source.toDF().limit(10))\r\n",
+							"display(deltaTable_sink.toDF().limit(10))"
+						],
+						"outputs": [],
+						"execution_count": 40
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# stop\r\n",
+							"q.stop()"
+						],
+						"outputs": [],
+						"execution_count": 38
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"#### As sink"
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"source_files_path = root_folder+'/dp-203/Allfiles/labs/07/json_file_drop'\r\n",
+							"delta_table_path_stream_sink = root_folder+'/delta_lake/sink_demo_sink'\r\n",
+							"delta_table_path_stream_sink_cp = root_folder+'/delta_lake/sink_demo_checkpoint'"
+						],
+						"outputs": [],
+						"execution_count": 75
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"from pyspark.sql.types import *\r\n",
+							"from pyspark.sql.functions import *\r\n",
+							"\r\n",
+							"# Create a stream that reads JSON data from a folder\r\n",
+							"jsonSchema = StructType([\r\n",
+							"    StructField(\"device\", StringType(), False),\r\n",
+							"    StructField(\"status\", StringType(), False)\r\n",
+							"])\r\n",
+							"stream_df = spark.readStream.schema(jsonSchema).option(\"maxFilesPerTrigger\", 1).json(source_files_path)"
+						],
+						"outputs": [],
+						"execution_count": 82
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# Write the stream to a delta table\r\n",
+							"delta_stream = stream_df.writeStream.format(\"delta\").option(\"checkpointLocation\", delta_table_path_stream_sink_cp).start(delta_table_path_stream_sink)"
+						],
+						"outputs": [],
+						"execution_count": 83
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"microsoft": {
+								"language": "sparksql"
+							},
+							"collapsed": false
+						},
+						"source": [
+							"%%sql\r\n",
+							"\r\n",
+							"CREATE TABLE sink_demo\r\n",
+							"USING DELTA \r\n",
+							"LOCATION 'abfss://files@datalake9nlosdj.dfs.core.windows.net/delta_lake/sink_demo_sink'"
+						],
+						"outputs": [],
+						"execution_count": 46
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"microsoft": {
+								"language": "sparksql"
+							},
+							"collapsed": false
+						},
+						"source": [
+							"%%sql \r\n",
+							"SELECT device, status\r\n",
+							"FROM sink_demo;"
+						],
+						"outputs": [],
+						"execution_count": 89
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"# source files\r\n",
+							"df_json = spark.read.json(source_files_path, schema=jsonSchema)\r\n",
+							"display(df_json)"
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"delta_stream.stop()"
+						],
+						"outputs": [],
+						"execution_count": 87
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"microsoft": {
+								"language": "sparksql"
+							},
+							"collapsed": false
+						},
+						"source": [
+							"%%sql\r\n",
+							"\r\n",
+							"DROP TABLE sink_demo"
+						],
+						"outputs": [],
+						"execution_count": 92
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/11 Spark Transform for Pipeline')]",
+			"type": "Microsoft.Synapse/workspaces/notebooks",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"nbformat": 4,
+				"nbformat_minor": 2,
+				"bigDataPool": {
+					"referenceName": "spark9nlosdj",
+					"type": "BigDataPoolReference"
+				},
+				"sessionProperties": {
+					"driverMemory": "28g",
+					"driverCores": 4,
+					"executorMemory": "28g",
+					"executorCores": 4,
+					"numExecutors": 2,
+					"conf": {
+						"spark.dynamicAllocation.enabled": "false",
+						"spark.dynamicAllocation.minExecutors": "2",
+						"spark.dynamicAllocation.maxExecutors": "2",
+						"spark.autotune.trackingId": "c8807c2f-f29b-48f2-9744-e68369c393ea"
+					}
+				},
+				"metadata": {
+					"saveOutput": true,
+					"enableDebugMode": false,
+					"kernelspec": {
+						"name": "synapse_pyspark",
+						"display_name": "Synapse PySpark"
+					},
+					"language_info": {
+						"name": "python"
+					},
+					"a365ComputeOptions": {
+						"id": "/subscriptions/3ab7621d-8ee4-445a-8dd2-8b1f6718c4dc/resourceGroups/dp203-9nlosdj/providers/Microsoft.Synapse/workspaces/synapse9nlosdj/bigDataPools/spark9nlosdj",
+						"name": "spark9nlosdj",
+						"type": "Spark",
+						"endpoint": "https://synapse9nlosdj.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/spark9nlosdj",
+						"auth": {
+							"type": "AAD",
+							"authResource": "https://dev.azuresynapse.net"
+						},
+						"sparkVersion": "3.4",
+						"nodeCount": 3,
+						"cores": 4,
+						"memory": 28
+					},
+					"sessionKeepAliveTimeout": 30
+				},
+				"cells": [
+					{
+						"cell_type": "markdown",
+						"source": [
+							"# Transform data by using Spark\n",
+							"\n",
+							"This notebook transforms sales order data; converting it from CSV to Parquet format and splitting customer name into two separate fields.\n",
+							"\n",
+							"## Set variables"
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"tags": [
+								"parameters"
+							]
+						},
+						"source": [
+							"import uuid\r\n",
+							"\r\n",
+							"# Variable for unique folder name\r\n",
+							"folderName = uuid.uuid4()"
+						],
+						"outputs": [],
+						"execution_count": 8
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"## Load source data\r\n",
+							"\r\n",
+							"Let's start by loading some historical sales order data into a dataframe."
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"collapsed": false
+						},
+						"source": [
+							"order_details = spark.read.csv('/dp-203/Allfiles/labs/11/data/*.csv', header=True, inferSchema=True)"
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"## Transform the data structure\r\n",
+							"\r\n",
+							"The source data includes a **CustomerName** field, that contains the customer's first and last name. Modify the dataframe to separate this field into separate **FirstName** and **LastName** fields."
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"from pyspark.sql.functions import split, col\r\n",
+							"\r\n",
+							"# Create the new FirstName and LastName fields\r\n",
+							"transformed_df = order_details.withColumn(\"FirstName\", split(col(\"CustomerName\"), \" \").getItem(0)).withColumn(\"LastName\", split(col(\"CustomerName\"), \" \").getItem(1))\r\n",
+							"\r\n",
+							"# Remove the CustomerName field\r\n",
+							"transformed_df = transformed_df.drop(\"CustomerName\")"
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"## Save the transformed data\r\n",
+							"\r\n",
+							"Now save the transformed dataframe in Parquet format in a folder specified in a variable (Overwriting the data if it already exists)."
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"transformed_df.write.mode(\"overwrite\").parquet('/pipelines/spark_pipeline/%s' % folderName)\r\n",
+							"print (\"Transformed data saved in %s!\" % folderName)"
+						],
+						"outputs": [],
+						"execution_count": null
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/14 Spark with Synapse Link to CosmosDB')]",
+			"type": "Microsoft.Synapse/workspaces/notebooks",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"nbformat": 4,
+				"nbformat_minor": 2,
+				"bigDataPool": {
+					"referenceName": "spark9nlosdj",
+					"type": "BigDataPoolReference"
+				},
+				"sessionProperties": {
+					"driverMemory": "28g",
+					"driverCores": 4,
+					"executorMemory": "28g",
+					"executorCores": 4,
+					"numExecutors": 2,
+					"conf": {
+						"spark.dynamicAllocation.enabled": "false",
+						"spark.dynamicAllocation.minExecutors": "2",
+						"spark.dynamicAllocation.maxExecutors": "2",
+						"spark.autotune.trackingId": "a503ae12-34ab-4282-a568-9d2e2f3235ea"
+					}
+				},
+				"metadata": {
+					"saveOutput": true,
+					"enableDebugMode": false,
+					"kernelspec": {
+						"name": "synapse_pyspark",
+						"display_name": "Synapse PySpark"
+					},
+					"language_info": {
+						"name": "python"
+					},
+					"a365ComputeOptions": {
+						"id": "/subscriptions/3ab7621d-8ee4-445a-8dd2-8b1f6718c4dc/resourceGroups/dp203-9nlosdj/providers/Microsoft.Synapse/workspaces/synapse9nlosdj/bigDataPools/spark9nlosdj",
+						"name": "spark9nlosdj",
+						"type": "Spark",
+						"endpoint": "https://synapse9nlosdj.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/spark9nlosdj",
+						"auth": {
+							"type": "AAD",
+							"authResource": "https://dev.azuresynapse.net"
+						},
+						"sparkVersion": "3.4",
+						"nodeCount": 3,
+						"cores": 4,
+						"memory": 28
+					},
+					"sessionKeepAliveTimeout": 30
+				},
+				"cells": [
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"### Reading data from CosmosDB container"
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"collapsed": false
+						},
+						"source": [
+							"# Read from Cosmos DB analytical store into a Spark DataFrame and display 10 rows from the DataFrame\n",
+							"# To select a preferred list of regions in a multi-region Cosmos DB account, add .option(\"spark.cosmos.preferredRegions\", \"<Region1>,<Region2>\")\n",
+							"\n",
+							"df = spark.read\\\n",
+							"    .format(\"cosmos.olap\")\\\n",
+							"    .option(\"spark.synapse.linkedService\", \"AdventureWorks\")\\\n",
+							"    .option(\"spark.cosmos.container\", \"Sales\")\\\n",
+							"    .load()\n",
+							"\n",
+							"display(df.limit(10))"
+						],
+						"outputs": [],
+						"execution_count": 6
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"#### Expanding JSON hierarchies"
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"customer_df = df.select('customerid', 'customerdetails')\r\n",
+							"display(customer_df)"
+						],
+						"outputs": [],
+						"execution_count": 2
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"customer_details_df = df.select('customerid', 'customerdetails.*')\r\n",
+							"display(customer_details_df)"
+						],
+						"outputs": [],
+						"execution_count": 3
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"microsoft": {
+								"language": "sparksql"
+							},
+							"collapsed": false
+						},
+						"source": [
+							"%%sql\r\n",
+							"\r\n",
+							"-- Create a logical database in the Spark metastore\r\n",
+							"CREATE DATABASE CosmoseSalesdb;\r\n",
+							"\r\n",
+							"USE CosmoseSalesdb;\r\n",
+							"\r\n",
+							"-- Create a table from the Cosmos DB container\r\n",
+							"-- directly from the container\r\n",
+							"CREATE TABLE salesorders using cosmos.olap options (\r\n",
+							"    spark.synapse.linkedService 'AdventureWorks',\r\n",
+							"    spark.cosmos.container 'Sales'\r\n",
+							");\r\n",
+							"\r\n",
+							"-- Query the table\r\n",
+							"SELECT *\r\n",
+							"FROM salesorders;"
+						],
+						"outputs": [],
+						"execution_count": 4
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"microsoft": {
+								"language": "sparksql"
+							},
+							"collapsed": false
+						},
+						"source": [
+							"%%sql\r\n",
+							"\r\n",
+							"SELECT id, orderdate, customerdetails.customername, product\r\n",
+							"FROM salesorders\r\n",
+							"ORDER BY id;"
+						],
+						"outputs": [],
+						"execution_count": 5
+					},
+					{
+						"cell_type": "markdown",
+						"metadata": {
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"### Writing back - supprted but not recomended"
+						]
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"df_new = df.where(\"id = 'SO43704'\")"
+						],
+						"outputs": [],
+						"execution_count": 16
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"from pyspark.sql.functions import col, when\r\n",
+							"\r\n",
+							"df_new = df_new.withColumn(\"quantity\", when(col(\"id\") == \"SO43704\", 3).otherwise(col(\"quantity\")))"
+						],
+						"outputs": [],
+						"execution_count": 21
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": false
+						},
+						"source": [
+							"display(df_new)"
+						],
+						"outputs": [],
+						"execution_count": 23
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"df_new.write.format(\"cosmos.oltp\")\\\r\n",
+							"    .option(\"spark.synapse.linkedService\", \"AdventureWorks\")\\\r\n",
+							"    .option(\"spark.cosmos.container\", \"Sales\")\\\r\n",
+							"    .mode('append')\\\r\n",
+							"    .save()"
+						],
+						"outputs": [],
+						"execution_count": 26
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/spark5ox7t4s')]",
+			"type": "Microsoft.Synapse/workspaces/bigDataPools",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"autoPause": {
+					"enabled": true,
+					"delayInMinutes": 15
+				},
+				"autoScale": {
+					"enabled": true,
+					"maxNodeCount": 4,
+					"minNodeCount": 3
+				},
+				"nodeCount": 0,
+				"nodeSize": "Small",
+				"nodeSizeFamily": "MemoryOptimized",
+				"sparkVersion": "3.4",
+				"isComputeIsolationEnabled": false,
+				"sessionLevelPackagesEnabled": false,
+				"annotations": []
+			},
+			"dependsOn": [],
+			"location": "australiaeast"
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/sql5ox7t4s')]",
+			"type": "Microsoft.Synapse/workspaces/sqlPools",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"collation": "SQL_Latin1_General_CP1_CI_AS",
+				"maxSizeBytes": 263882790666240,
+				"annotations": []
+			},
+			"dependsOn": [],
+			"location": "australiaeast"
+		}
+	]
+}

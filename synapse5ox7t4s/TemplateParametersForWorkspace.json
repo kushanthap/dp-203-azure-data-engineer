@@ -1,0 +1,36 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"workspaceName": {
+			"value": "synapse5ox7t4s"
+		},
+		"Data_Warehouse_connectionString": {
+			"value": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=synapse9nlosdj.sql.azuresynapse.net;Initial Catalog=sql9nlosdj"
+		},
+		"SqlAdventureWorksLT_connectionString": {
+			"value": ""
+		},
+		"synapse5ox7t4s-WorkspaceDefaultSqlServer_connectionString": {
+			"value": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=tcp:synapse5ox7t4s.sql.azuresynapse.net,1433;Initial Catalog=@{linkedService().DBName}"
+		},
+		"synapse9nlosdj-WorkspaceDefaultSqlServer_connectionString": {
+			"value": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=tcp:synapse9nlosdj.sql.azuresynapse.net,1433;Initial Catalog=@{linkedService().DBName}"
+		},
+		"synapsedtg248c-WorkspaceDefaultSqlServer_connectionString": {
+			"value": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=tcp:synapsedtg248c.sql.azuresynapse.net,1433;Initial Catalog=@{linkedService().DBName}"
+		},
+		"Products_properties_typeProperties_url": {
+			"value": "https://raw.githubusercontent.com/MicrosoftLearning/dp-203-azure-data-engineer/master/Allfiles/labs/01/adventureworks/products.csv"
+		},
+		"ServerlessSQLServer_SalesDB_properties_typeProperties_server": {
+			"value": "synapse9nlosdj-ondemand.sql.azuresynapse.net"
+		},
+		"ServerlessSQLServer_SalesDB_properties_typeProperties_database": {
+			"value": "Sales"
+		},
+		"synapse5ox7t4s-WorkspaceDefaultStorage_properties_typeProperties_url": {
+			"value": "https://datalake5ox7t4s.dfs.core.windows.net"
+		}
+	}
+}
