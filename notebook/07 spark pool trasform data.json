@@ -4,7 +4,7 @@
 		"nbformat": 4,
 		"nbformat_minor": 2,
 		"bigDataPool": {
-			"referenceName": "spark9nlosdj",
+			"referenceName": "spark5ox7t4s",
 			"type": "BigDataPoolReference"
 		},
 		"sessionProperties": {
@@ -17,7 +17,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "2",
 				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "2733216f-ff6e-48bc-83cb-426d408ae525"
+				"spark.autotune.trackingId": "7ae2e572-318f-435e-9543-225a1fe4dad5"
 			}
 		},
 		"metadata": {
@@ -31,10 +31,10 @@
 				"name": "python"
 			},
 			"a365ComputeOptions": {
-				"id": "/subscriptions/3ab7621d-8ee4-445a-8dd2-8b1f6718c4dc/resourceGroups/dp203-9nlosdj/providers/Microsoft.Synapse/workspaces/synapse9nlosdj/bigDataPools/spark9nlosdj",
-				"name": "spark9nlosdj",
+				"id": "/subscriptions/5ca83c9e-0cc9-4966-9c5d-027da827f595/resourceGroups/dp203-5ox7t4s/providers/Microsoft.Synapse/workspaces/synapse5ox7t4s/bigDataPools/spark5ox7t4s",
+				"name": "spark5ox7t4s",
 				"type": "Spark",
-				"endpoint": "https://synapse9nlosdj.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/spark9nlosdj",
+				"endpoint": "https://synapse5ox7t4s.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/spark5ox7t4s",
 				"auth": {
 					"type": "AAD",
 					"authResource": "https://dev.azuresynapse.net"
@@ -72,11 +72,32 @@
 				},
 				"source": [
 					"# infer schema\n",
-					"root_folder = 'abfss://files@datalake9nlosdj.dfs.core.windows.net/dp-203/Allfiles/labs/06'\n",
-					"order_details = spark.read.csv(root_folder+'/data/*.csv', header=True, inferSchema=True)\n",
+					"root_folder = 'abfss://files@datalake5ox7t4s.dfs.core.windows.net/labs'\n",
+					"order_details = spark.read.csv(root_folder+'/06/*.csv', header=True, inferSchema=True)\n",
 					"display(order_details.limit(5))"
 				],
-				"execution_count": 1
+				"execution_count": 8
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"root_folder = 'abfss://files@datalake5ox7t4s.dfs.core.windows.net/labs'\r\n",
+					"order_details = spark.read.load(root_folder+'/06/*.csv', header=True, format='csv')\r\n",
+					"display(order_details.limit(5))"
+				],
+				"execution_count": 11
 			},
 			{
 				"cell_type": "code",
@@ -95,7 +116,7 @@
 				"source": [
 					"display(order_details.limit(5))"
 				],
-				"execution_count": 22
+				"execution_count": 16
 			},
 			{
 				"cell_type": "code",
@@ -114,7 +135,7 @@
 					"# check schema\r\n",
 					"order_details.printSchema()"
 				],
-				"execution_count": 5
+				"execution_count": 13
 			},
 			{
 				"cell_type": "code",
@@ -148,7 +169,7 @@
 					")\r\n",
 					"\r\n",
 					"order_details = spark.read.load(\r\n",
-					"    path=root_folder+'/data/*.csv',\r\n",
+					"    path=root_folder+'/06/*.csv',\r\n",
 					"    format='csv',\r\n",
 					"    schema=custom_schema,\r\n",
 					"    header=True\r\n",
@@ -212,7 +233,7 @@
 					"# OR order_details_s = order_details['SalesOrderNumber', 'TaxAmount']\r\n",
 					"display(order_details_s.limit(10))"
 				],
-				"execution_count": 25
+				"execution_count": 18
 			},
 			{
 				"cell_type": "code",
@@ -233,7 +254,7 @@
 					"order_details_s = order_details.select('SalesOrderNumber', 'TaxAmount').where(order_details['Item'] == 'Mountain-200 Silver, 38')\r\n",
 					"display(order_details_s.limit(10))"
 				],
-				"execution_count": 27
+				"execution_count": 19
 			},
 			{
 				"cell_type": "code",
@@ -263,7 +284,27 @@
 					"\r\n",
 					"display(transformed_df.limit(5))"
 				],
-				"execution_count": 2
+				"execution_count": 20
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"transformed_df = order_details.withColumn(\"FirstName\", split(\"CustomerName\", \" \").getItem(0))\r\n",
+					"display(transformed_df.limit(5))"
+				],
+				"execution_count": 26
 			},
 			{
 				"cell_type": "code",
@@ -286,7 +327,128 @@
 					"# OR order_details_s = order_details['SalesOrderNumber', 'TaxAmount']\r\n",
 					"display(order_details_s.limit(10))"
 				],
-				"execution_count": 38
+				"execution_count": 21
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"order_details_s = order_details['OrderDate', 'TaxAmount', year('OrderDate')]\r\n",
+					"display(order_details_s.limit(10))"
+				],
+				"execution_count": 25
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"order_details_v = order_details.select(col('Quantity') * col('UnitPrice')) # col() must be used\r\n",
+					"order_details_v = order_details.select(order_details['Quantity'] * order_details['UnitPrice']) # alternative\r\n",
+					"display(order_details_v.limit(10))"
+				],
+				"execution_count": 29
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"order_details_s = order_details.select('OrderDate', 'TaxAmount', year('OrderDate').alias('OrderYear')) #.withColumn('OrderYear', year(col('OrderDate'))).groupBy('OrderYear').sum('TaxAmount')\r\n",
+					"# OR order_details_s = order_details['SalesOrderNumber', 'TaxAmount']\r\n",
+					"display(order_details_s.limit(10))"
+				],
+				"execution_count": 22
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					}
+				},
+				"source": [
+					"print(order_details.count())\r\n",
+					"print(order_details.distinct().count())"
+				],
+				"execution_count": 33
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"productSales = order_details.select(\"Item\", \"Quantity\").groupBy(\"Item\").sum()\r\n",
+					"display(productSales)"
+				],
+				"execution_count": 32
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"yearlySales = order_details.select(year(\"OrderDate\").alias(\"Year\")).groupBy(\"Year\").count().orderBy(\"Year\")\r\n",
+					"display(yearlySales)"
+				],
+				"execution_count": 31
 			},
 			{
 				"cell_type": "code",
@@ -339,9 +501,29 @@
 					}
 				},
 				"source": [
-					"rel_path = 'abfss://files@datalake9nlosdj.dfs.core.windows.net/spark_data'"
+					"rel_path = root_folder #'abfss://files@datalake9nlosdj.dfs.core.windows.net/spark_data'\r\n",
+					"root_folder"
 				],
-				"execution_count": 8
+				"execution_count": 35
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": false
+				},
+				"source": [
+					"display(transformed_df.limit(10))"
+				],
+				"execution_count": 39
 			},
 			{
 				"cell_type": "code",
@@ -357,10 +539,10 @@
 					}
 				},
 				"source": [
-					"transformed_df.write.mode(\"overwrite\").parquet(rel_path+'/transformed_data/orders.parquet')\r\n",
+					"transformed_df.write.mode(\"overwrite\").parquet(rel_path+'/06/transformed_data/orders.parquet')\r\n",
 					"print (\"Transformed data saved!\")"
 				],
-				"execution_count": 41
+				"execution_count": 37
 			},
 			{
 				"cell_type": "markdown",
@@ -411,10 +593,10 @@
 					"\r\n",
 					"dated_df = transformed_df.withColumn(\"Year\", year(col(\"OrderDate\"))).withColumn(\"Month\", month(col(\"OrderDate\")))\r\n",
 					"display(dated_df.limit(5))\r\n",
-					"dated_df.write.partitionBy(\"Year\",\"Month\").mode(\"overwrite\").parquet(rel_path+\"/partitioned_data\")\r\n",
+					"dated_df.write.partitionBy(\"Year\",\"Month\").mode(\"overwrite\").parquet(rel_path+\"/06/partitioned_data\")\r\n",
 					"print (\"Transformed data saved!\")"
 				],
-				"execution_count": 42
+				"execution_count": 41
 			},
 			{
 				"cell_type": "markdown",
@@ -449,20 +631,20 @@
 					"# read partitioned data\r\n",
 					"\r\n",
 					"# all months in 2020\r\n",
-					"orders_2020 = spark.read.parquet(rel_path+'/partitioned_data/Year=2020/Month=*')\r\n",
-					"display(orders_2020.limit(5))\r\n",
+					"# orders_2020 = spark.read.parquet(rel_path+'/06/partitioned_data/Year=2020/Month=*')\r\n",
+					"# display(orders_2020.limit(5))\r\n",
 					"\r\n",
-					"# all months in 2020 with Month column returned\r\n",
-					"orders_2020 = spark.read.parquet(rel_path+'/partitioned_data/Year=2020')\r\n",
-					"display(orders_2020.limit(5))\r\n",
+					"# # all months in 2020 with Month column returned\r\n",
+					"# orders_2020 = spark.read.parquet(rel_path+'/06/partitioned_data/Year=2020')\r\n",
+					"# display(orders_2020.limit(5))\r\n",
 					"\r\n",
-					"# all months in 2020 with Year and Month column returned\r\n",
-					"orders_2020 = spark.read.parquet(rel_path+'/partitioned_data/')\r\n",
+					"# # all months in 2020 with Year and Month column returned\r\n",
+					"orders_2020 = spark.read.parquet(rel_path+'/06/partitioned_data/')\r\n",
 					"display(orders_2020.limit(5))\r\n",
 					"\r\n",
 					""
 				],
-				"execution_count": 51
+				"execution_count": 45
 			},
 			{
 				"cell_type": "markdown",
@@ -501,14 +683,15 @@
 						"transient": {
 							"deleting": false
 						}
-					}
+					},
+					"collapsed": false
 				},
 				"source": [
 					"dated_df.createOrReplaceTempView('dated_df')\r\n",
 					"\r\n",
 					"display(spark.sql('select * from dated_df'))"
 				],
-				"execution_count": 74
+				"execution_count": 46
 			},
 			{
 				"cell_type": "markdown",
@@ -566,9 +749,9 @@
 				"source": [
 					"# EXTERNAL TABLE\r\n",
 					"# from dataframe as parquet\r\n",
-					"transformed_df.write.saveAsTable('tblx_orders',mode='overwrite', format='parquet', path=rel_path+'/external_tables/tblx_orders')"
+					"transformed_df.write.saveAsTable('tblx_orders',mode='overwrite', format='parquet', path=rel_path+'/06/external_tables/tblx_orders')"
 				],
-				"execution_count": 54
+				"execution_count": 47
 			},
 			{
 				"cell_type": "code",
@@ -605,7 +788,7 @@
 				"source": [
 					"# natively with existing files\r\n",
 					"spark.catalog.createExternalTable(\r\n",
-					"    'tblx_orders2', path=rel_path+'/transformed_data/orders.parquet/', source='parquet'\r\n",
+					"    'tblx_orders2', path=rel_path+'/06/transformed_data/orders.parquet/', source='parquet'\r\n",
 					")"
 				],
 				"execution_count": 55
@@ -626,10 +809,10 @@
 				"source": [
 					"# natively with existing files with partitions\r\n",
 					"spark.catalog.createExternalTable(\r\n",
-					"    'tblx_orders3', path=rel_path+'/partitioned_data/', source='parquet', partitionBy=\"Year,Month\"\r\n",
+					"    'tblx_orders3', path=rel_path+'/06/partitioned_data/', source='parquet', partitionBy=\"Year,Month\"\r\n",
 					")"
 				],
-				"execution_count": 68
+				"execution_count": 48
 			},
 			{
 				"cell_type": "markdown",
@@ -851,11 +1034,11 @@
 					"\r\n",
 					"-- Querying data in other Lakehouse DBs\r\n",
 					"\r\n",
-					"USE RetailDB;\r\n",
+					"USE MyLakeDB;\r\n",
 					"\r\n",
-					"SELECT * from Product;"
+					"SELECT * from Customers;"
 				],
-				"execution_count": 7
+				"execution_count": 50
 			}
 		]
 	}
