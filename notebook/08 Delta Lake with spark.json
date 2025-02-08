@@ -17,7 +17,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "2",
 				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "6b3ce022-e547-4873-8b26-be74df764053"
+				"spark.autotune.trackingId": "66ab66a7-1305-4903-ab3c-3c8809cf336a"
 			}
 		},
 		"metadata": {
@@ -1384,6 +1384,7 @@
 				},
 				"source": [
 					"%%sql\r\n",
+					"\r\n",
 					"\r\n",
 					"DROP TABLE sink_demo"
 				],
