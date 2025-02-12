@@ -10,10 +10,29 @@
 						"type": "DatasetReference"
 					},
 					"name": "ProductsText"
+				},
+				{
+					"dataset": {
+						"referenceName": "Products_Csv2",
+						"type": "DatasetReference"
+					},
+					"name": "ProductsText2"
 				}
 			],
-			"sinks": [],
-			"transformations": [],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ProductResult",
+						"type": "DatasetReference"
+					},
+					"name": "resultLookup"
+				}
+			],
+			"transformations": [
+				{
+					"name": "matchedProduct"
+				}
+			],
 			"scriptLines": [
 				"source(output(",
 				"          ProductID as string,",
@@ -25,7 +44,31 @@
 				"     ),",
 				"     allowSchemaDrift: true,",
 				"     validateSchema: false,",
-				"     ignoreNoFilesFound: false) ~> ProductsText"
+				"     ignoreNoFilesFound: false) ~> ProductsText",
+				"source(output(",
+				"          ProductID as string,",
+				"          ProductName as string,",
+				"          ProductCategory as string,",
+				"          Color as string,",
+				"          Size as string,",
+				"          ListPrice as string,",
+				"          Discontinued as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> ProductsText2",
+				"ProductsText, ProductsText2 lookup(ProductsText@ProductID == ProductsText2@ProductID,",
+				"     multiple: false,",
+				"     pickup: 'last',",
+				"     asc(ProductsText2@ProductID, true),",
+				"     broadcast: 'auto')~> matchedProduct",
+				"matchedProduct sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> resultLookup"
 			]
 		}
 	}
