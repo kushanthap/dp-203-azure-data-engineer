@@ -20,7 +20,7 @@
 							"referenceName": "synapse5ox7t4s-WorkspaceDefaultStorage",
 							"type": "LinkedServiceReference"
 						},
-						"folderPath": "files"
+						"folderPath": "files/labs/10"
 					},
 					"compute": {
 						"coreCount": 8,
