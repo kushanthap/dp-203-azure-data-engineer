@@ -20,11 +20,7 @@
 						"type": "DataFlowReference"
 					},
 					"staging": {
-						"linkedService": {
-							"referenceName": "synapse5ox7t4s-WorkspaceDefaultStorage",
-							"type": "LinkedServiceReference"
-						},
-						"folderPath": "files/labs/10"
+						"folderPath": ""
 					},
 					"compute": {
 						"coreCount": 8,
