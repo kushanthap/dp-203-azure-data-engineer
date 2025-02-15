@@ -16,10 +16,6 @@
 				"userProperties": [],
 				"typeProperties": {
 					"storedProcedureName": "[dbo].[sp_GetYearlySales_pipeline]"
-				},
-				"linkedServiceName": {
-					"referenceName": "ServerlessSQLServer_SalesDB",
-					"type": "LinkedServiceReference"
 				}
 			}
 		],
