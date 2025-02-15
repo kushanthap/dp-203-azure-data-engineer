@@ -5,6 +5,9 @@
 		"workspaceName": {
 			"value": "synapse5ox7t4s"
 		},
+		"AdventureWorks_connectionString": {
+			"value": ""
+		},
 		"Data_Warehouse_connectionString": {
 			"value": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=synapse9nlosdj.sql.azuresynapse.net;Initial Catalog=sql9nlosdj"
 		},
@@ -22,12 +25,6 @@
 		},
 		"Products_properties_typeProperties_url": {
 			"value": "https://raw.githubusercontent.com/MicrosoftLearning/dp-203-azure-data-engineer/master/Allfiles/labs/01/adventureworks/products.csv"
-		},
-		"ServerlessSQLServer_SalesDB_properties_typeProperties_server": {
-			"value": "synapse9nlosdj-ondemand.sql.azuresynapse.net"
-		},
-		"ServerlessSQLServer_SalesDB_properties_typeProperties_database": {
-			"value": "Sales"
 		},
 		"synapse5ox7t4s-WorkspaceDefaultStorage_properties_typeProperties_url": {
 			"value": "https://datalake5ox7t4s.dfs.core.windows.net"

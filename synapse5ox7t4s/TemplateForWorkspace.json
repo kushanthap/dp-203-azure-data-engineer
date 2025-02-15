@@ -7,6 +7,10 @@
 			"metadata": "Workspace name",
 			"defaultValue": "synapse5ox7t4s"
 		},
+		"AdventureWorks_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'AdventureWorks'"
+		},
 		"Data_Warehouse_connectionString": {
 			"type": "secureString",
 			"metadata": "Secure string for 'connectionString' of 'Data_Warehouse'",
@@ -35,14 +39,6 @@
 			"type": "string",
 			"defaultValue": "https://raw.githubusercontent.com/MicrosoftLearning/dp-203-azure-data-engineer/master/Allfiles/labs/01/adventureworks/products.csv"
 		},
-		"ServerlessSQLServer_SalesDB_properties_typeProperties_server": {
-			"type": "string",
-			"defaultValue": "synapse9nlosdj-ondemand.sql.azuresynapse.net"
-		},
-		"ServerlessSQLServer_SalesDB_properties_typeProperties_database": {
-			"type": "string",
-			"defaultValue": "Sales"
-		},
 		"synapse5ox7t4s-WorkspaceDefaultStorage_properties_typeProperties_url": {
 			"type": "string",
 			"defaultValue": "https://datalake5ox7t4s.dfs.core.windows.net"
@@ -59,7 +55,7 @@
 			"properties": {
 				"activities": [
 					{
-						"name": "Transform Data",
+						"name": "Stored procedure1",
 						"type": "SqlServerStoredProcedure",
 						"dependsOn": [],
 						"policy": {
@@ -71,10 +67,10 @@
 						},
 						"userProperties": [],
 						"typeProperties": {
-							"storedProcedureName": "[dbo].[sp_GetYearlySales_pipeline]"
+							"storedProcedureName": "[dbo].[uspLogError]"
 						},
 						"linkedServiceName": {
-							"referenceName": "ServerlessSQLServer_SalesDB",
+							"referenceName": "SqlAdventureWorksLT",
 							"type": "LinkedServiceReference"
 						}
 					}
@@ -85,7 +81,7 @@
 				"annotations": []
 			},
 			"dependsOn": [
-				"[concat(variables('workspaceId'), '/linkedServices/ServerlessSQLServer_SalesDB')]"
+				"[concat(variables('workspaceId'), '/linkedServices/SqlAdventureWorksLT')]"
 			]
 		},
 		{
@@ -600,6 +596,25 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('workspaceName'), '/AdventureWorks')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "CosmosDb",
+				"typeProperties": {
+					"connectionString": "[parameters('AdventureWorks_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('workspaceName'), '/Data_Warehouse')]",
 			"type": "Microsoft.Synapse/workspaces/linkedServices",
 			"apiVersion": "2019-06-01-preview",
@@ -642,34 +657,10 @@
 			]
 		},
 		{
-			"name": "[concat(parameters('workspaceName'), '/ServerlessSQLServer_SalesDB')]",
-			"type": "Microsoft.Synapse/workspaces/linkedServices",
-			"apiVersion": "2019-06-01-preview",
-			"properties": {
-				"annotations": [],
-				"type": "AzureSqlDatabase",
-				"typeProperties": {
-					"server": "[parameters('ServerlessSQLServer_SalesDB_properties_typeProperties_server')]",
-					"database": "[parameters('ServerlessSQLServer_SalesDB_properties_typeProperties_database')]",
-					"encrypt": "mandatory",
-					"trustServerCertificate": false,
-					"authenticationType": "SystemAssignedManagedIdentity"
-				},
-				"connectVia": {
-					"referenceName": "AutoResolveIntegrationRuntime",
-					"type": "IntegrationRuntimeReference"
-				}
-			},
-			"dependsOn": [
-				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
-			]
-		},
-		{
 			"name": "[concat(parameters('workspaceName'), '/SqlAdventureWorksLT')]",
 			"type": "Microsoft.Synapse/workspaces/linkedServices",
 			"apiVersion": "2019-06-01-preview",
 			"properties": {
-				"description": "Connection to AdventureWorksLT database",
 				"annotations": [],
 				"type": "AzureSqlDatabase",
 				"typeProperties": {
@@ -3825,7 +3816,7 @@
 				"nbformat": 4,
 				"nbformat_minor": 2,
 				"bigDataPool": {
-					"referenceName": "spark9nlosdj",
+					"referenceName": "spark5ox7t4s",
 					"type": "BigDataPoolReference"
 				},
 				"sessionProperties": {
@@ -3838,7 +3829,7 @@
 						"spark.dynamicAllocation.enabled": "false",
 						"spark.dynamicAllocation.minExecutors": "2",
 						"spark.dynamicAllocation.maxExecutors": "2",
-						"spark.autotune.trackingId": "a503ae12-34ab-4282-a568-9d2e2f3235ea"
+						"spark.autotune.trackingId": "1423744f-985b-47b1-97f5-73e2635f47ff"
 					}
 				},
 				"metadata": {
@@ -3852,10 +3843,10 @@
 						"name": "python"
 					},
 					"a365ComputeOptions": {
-						"id": "/subscriptions/3ab7621d-8ee4-445a-8dd2-8b1f6718c4dc/resourceGroups/dp203-9nlosdj/providers/Microsoft.Synapse/workspaces/synapse9nlosdj/bigDataPools/spark9nlosdj",
-						"name": "spark9nlosdj",
+						"id": "/subscriptions/5ca83c9e-0cc9-4966-9c5d-027da827f595/resourceGroups/dp203-5ox7t4s/providers/Microsoft.Synapse/workspaces/synapse5ox7t4s/bigDataPools/spark5ox7t4s",
+						"name": "spark5ox7t4s",
 						"type": "Spark",
-						"endpoint": "https://synapse9nlosdj.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/spark9nlosdj",
+						"endpoint": "https://synapse5ox7t4s.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/spark5ox7t4s",
 						"auth": {
 							"type": "AAD",
 							"authResource": "https://dev.azuresynapse.net"
@@ -3884,6 +3875,25 @@
 					{
 						"cell_type": "code",
 						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"print('Spark started')"
+						],
+						"outputs": [],
+						"execution_count": 1
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
 							"collapsed": false
 						},
 						"source": [
@@ -3899,7 +3909,7 @@
 							"display(df.limit(10))"
 						],
 						"outputs": [],
-						"execution_count": 6
+						"execution_count": 2
 					},
 					{
 						"cell_type": "markdown",
@@ -3925,15 +3935,34 @@
 								"transient": {
 									"deleting": false
 								}
+							}
+						},
+						"source": [
+							"from pyspark.sql.functions import explode, col"
+						],
+						"outputs": [],
+						"execution_count": 11
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
 							},
 							"collapsed": false
 						},
 						"source": [
-							"customer_df = df.select('customerid', 'customerdetails')\r\n",
+							"customer_df = df.select(\"customerid\", 'customerdetails.customername', 'customerdetails.customeremail')\r\n",
 							"display(customer_df)"
 						],
 						"outputs": [],
-						"execution_count": 2
+						"execution_count": 18
 					},
 					{
 						"cell_type": "code",
@@ -3961,7 +3990,7 @@
 						"metadata": {
 							"jupyter": {
 								"source_hidden": false,
-								"outputs_hidden": false
+								"outputs_hidden": true
 							},
 							"nteract": {
 								"transient": {
@@ -3980,20 +4009,70 @@
 							"CREATE DATABASE CosmoseSalesdb;\r\n",
 							"\r\n",
 							"USE CosmoseSalesdb;\r\n",
-							"\r\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": 19
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": true
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"microsoft": {
+								"language": "sparksql"
+							},
+							"collapsed": false
+						},
+						"source": [
+							"%%sql \r\n",
 							"-- Create a table from the Cosmos DB container\r\n",
 							"-- directly from the container\r\n",
-							"CREATE TABLE salesorders using cosmos.olap options (\r\n",
+							"CREATE TABLE salesorders\r\n",
+							"using cosmos.olap options (\r\n",
 							"    spark.synapse.linkedService 'AdventureWorks',\r\n",
 							"    spark.cosmos.container 'Sales'\r\n",
-							");\r\n",
+							")\r\n",
+							"\r\n",
+							"\r\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": 23
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"microsoft": {
+								"language": "sparksql"
+							},
+							"collapsed": false
+						},
+						"source": [
+							"%%sql \r\n",
 							"\r\n",
 							"-- Query the table\r\n",
 							"SELECT *\r\n",
-							"FROM salesorders;"
+							"FROM CosmoseSalesdb.salesorders;"
 						],
 						"outputs": [],
-						"execution_count": 4
+						"execution_count": 24
 					},
 					{
 						"cell_type": "code",
@@ -4020,7 +4099,56 @@
 							"ORDER BY id;"
 						],
 						"outputs": [],
-						"execution_count": 5
+						"execution_count": 25
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"microsoft": {
+								"language": "sparksql"
+							}
+						},
+						"source": [
+							"%%sql \r\n",
+							"-- Create a table from the Cosmos DB container\r\n",
+							"-- directly from the container\r\n",
+							"CREATE TABLE salesorders\r\n",
+							"using cosmos.olap options (\r\n",
+							"    spark.synapse.linkedService 'AdventureWorks',\r\n",
+							"    spark.cosmos.container 'Sales'\r\n",
+							")"
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							}
+						},
+						"source": [
+							"'spark.cosmos.container'='YOUR_CONTAINER_NAME',\r\n",
+							"        'spark.cosmos.read.schema'='{\"type\":\"struct\",\"fields\":[{\"name\":\"id\",\"type\":\"string\"},{\"name\":\"name\",\"type\":\"struct\",\"fields\":[{\"name\":\"first\",\"type\":\"string\"},{\"name\":\"last\",\"type\":\"string\"}]},{\"name\":\"age\",\"type\":\"integer\"},{\"name\":\"address\",\"type\":\"struct\",\"fields\":[{\"name\":\"city\",\"type\":\"string\"},{\"name\":\"zip\",\"type\":\"string\"}]}]}'"
+						],
+						"outputs": [],
+						"execution_count": null
 					},
 					{
 						"cell_type": "markdown",
