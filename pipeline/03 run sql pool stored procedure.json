@@ -14,8 +14,9 @@
 					"secureInput": false
 				},
 				"userProperties": [],
-				"typeProperties": {
-					"storedProcedureName": "[dbo].[sp_GetYearlySales_pipeline]"
+				"linkedServiceName": {
+					"referenceName": "SqlAdventureWorksLT",
+					"type": "LinkedServiceReference"
 				}
 			}
 		],
