@@ -2,13 +2,13 @@
 	"name": "15 Security Access Control",
 	"properties": {
 		"content": {
-			"query": "CREATE USER \nfrom external source \nwith default_schema=dbo\n\nCREATE USER [test@kushanthaoutlook.onmicrosoft.com] \nFROM EXTERNAL PROVIDER \nWITH DEFAULT_SCHEMA = [dbo];\n\nEXEC sp_addrolemember 'db_owner', '[test@kushanthaoutlook.onmicrosoft.com]';\n",
+			"query": "\nSELECT  oh.SalesOrderID, oh.OrderDate,\n        -- p.ProductNumber, p.Color, p.Size,\n        c.EmailAddress AS CustomerEmail\n        -- od.OrderQty, od.UnitPrice\nFROM SalesLT.SalesOrderHeader AS oh\n-- JOIN SalesLT.SalesOrderDetail AS od \n--     ON oh.SalesOrderID = od.SalesOrderID\n-- JOIN  SalesLT.Product AS p \n--     ON od.ProductID = p.ProductID\nJOIN SalesLT.Customer as c\n    ON oh.CustomerID = c.CustomerID\nORDER BY oh.SalesOrderID;\n\n\n\nCREATE USER \nfrom external source \nwith default_schema=dbo\n\nCREATE USER [test@kushanthaoutlook.onmicrosoft.com] \nFROM EXTERNAL PROVIDER \nWITH DEFAULT_SCHEMA = [dbo];\n\nEXEC sp_addrolemember 'db_owner', '[test@kushanthaoutlook.onmicrosoft.com]';\n",
 			"metadata": {
 				"language": "sql"
 			},
 			"currentConnection": {
-				"databaseName": "Sales",
-				"poolName": "Built-in"
+				"databaseName": "sql5ox7t4s",
+				"poolName": "sql5ox7t4s"
 			},
 			"resultLimit": 5000
 		},
