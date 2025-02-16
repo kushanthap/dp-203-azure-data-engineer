@@ -9,7 +9,7 @@
 				"policy": {
 					"timeout": "0.12:00:00",
 					"retry": 0,
-					"retryIntervalInSeconds": 30,
+					"retryIntervalInSeconds": 31,
 					"secureOutput": false,
 					"secureInput": false
 				},
@@ -21,17 +21,22 @@
 					},
 					"parameters": {
 						"folderName": {
-							"value": "@pipeline().RunId",
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
 							"type": "string"
 						}
 					},
 					"snapshot": true,
-					"sparkPool": {
-						"referenceName": "spark9nlosdj",
-						"type": "BigDataPoolReference"
-					},
 					"executorSize": "Small",
-					"driverSize": "Small"
+					"conf": {
+						"spark.dynamicAllocation.enabled": null,
+						"spark.dynamicAllocation.minExecutors": null,
+						"spark.dynamicAllocation.maxExecutors": null
+					},
+					"driverSize": "Small",
+					"numExecutors": null
 				}
 			}
 		],
